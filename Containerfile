@@ -98,8 +98,11 @@ RUN --mount=type=cache,dst=/var/cache \
                    nvidia-persistenced.service && \
     # Rimuoviamo i file di configurazione che forzano i parametri modeset (gestiti ora dal blacklist-nvidia.conf)
     rm -f /etc/modprobe.d/nvidia-modeset.conf && \
+    # Rimuoviamo kargs di default di bluebuild che forzano il caricamento dei driver
+    rm -f /usr/lib/bootc/kargs.d/bluebuild-kargs.toml && \
     # Rigeneriamo l'initramfs per applicare le esclusioni di dracut definite in build_files
-    # Nota: su bootc/blue-build questo viene gestito durante la creazione dell'immagine
+    # Su bootc, questo assicura che il nuovo initramfs non contenga i driver
+    dracut -f --regenerate-all && \
     echo "NixitOS: NVIDIA is now on-demand only."
 
 # ==========================================
