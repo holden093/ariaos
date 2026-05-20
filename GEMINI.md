@@ -14,9 +14,13 @@ This specific configuration is bound to the user's local hardware:
   - The eGPU is strictly activated manually via `egpu-up.sh` when heavy compute is needed. Do not introduce packages or services that force the NVIDIA driver to load at boot or integrate it with the Wayland/GNOME display server.
 
 ## 3. Optimization Goals (AI/LLM Focus)
-- **Minimalism:** Keep the base image as small as possible. Prefer Flatpaks or Distroboxes for GUI applications not explicitly requested in the base image.
+- **Minimalism:** Keep the base image as small as possible. 
+  - `glibc-all-langpacks` is explicitly removed to save space, but `glibc-langpack-it` and `langpacks-it` must be kept to support the user's primary locale (Italian) alongside English.
+  - Prefer Flatpaks or Distroboxes for GUI applications not explicitly requested in the base image.
 - **RAM Efficiency:** The system has 32GB of physical RAM, primarily intended for loading large weights in `llama.cpp`. 
   - zRAM is explicitly configured to 16GB with the `zstd` algorithm to compress OS/background tasks and prevent OOM without stealing physical RAM from the model. Do not alter this balance without explicit user confirmation.
 
-## 4. Active Skills
-- Use the `nixitos-optimizer` skill (if available/loaded) to periodically check system efficiency against the codebase.
+## 4. Documentation & Maintenance
+- **Active Skills:** Use the `nixitos-optimizer` skill to periodically check system efficiency.
+- **Always-Sync Docs:** Every structural change MUST be reflected in both `GEMINI.md` (for the agent) and `README.md` (for the user).
+- **Update Frequency:** Documentation is not static; update it whenever a package is added/removed or a service is tuned.

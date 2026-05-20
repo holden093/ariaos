@@ -66,6 +66,8 @@ RUN --mount=type=cache,dst=/var/cache \
     virt-manager \
     qemu-kvm \
     # --- Sviluppo & Varie ---
+    glibc-langpack-it \
+    langpacks-it \
     nodejs-npm \
     git \
     gh \
@@ -85,7 +87,17 @@ RUN --mount=type=cache,dst=/var/cache \
     # --- Pulizia ---
     rpm-ostree cleanup -m && \
     # --- Abilitazione servizi ---
-    systemctl enable podman.socket
+    systemctl enable podman.socket && \
+    # --- Enforce NVIDIA Blacklist & On-Demand policy ---
+    # Disabilitiamo i servizi che forzano il caricamento dei moduli NVIDIA all'avvio
+    systemctl mask nvidia-hibernate.service \
+                   nvidia-resume.service \
+                   nvidia-suspend.service \
+                   nvidia-suspend-then-hibernate.service \
+                   nvidia-powerd.service \
+                   nvidia-persistenced.service && \
+    # Rimuoviamo i file di configurazione che forzano i parametri modeset (gestiti ora dal blacklist-nvidia.conf)
+    rm -f /etc/modprobe.d/nvidia-modeset.conf
 
 # ==========================================
 # 3. BRANDING & IDENTITÀ

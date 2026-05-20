@@ -18,7 +18,8 @@ echo "    Trovato hardware: $lpcie"
 
 echo "==> Caricamento moduli NVIDIA per Compute..."
 # Carica i moduli core gestendo le dipendenze in automatico
-if modprobe nvidia && modprobe nvidia_uvm; then
+# Usiamo --ignore-install per bypassare il blocco di sicurezza nel file modprobe.d
+if modprobe --ignore-install nvidia && modprobe --ignore-install nvidia_uvm; then
     echo "✅ Moduli caricati con successo."
 else
     echo "❌ Errore: Impossibile caricare i moduli NVIDIA."
