@@ -26,7 +26,7 @@ RUN rpm-ostree install \
     glibc-all-langpacks \
     ModemManager \
     cups \
-    gnome-software-rpm-ostree && \
+    gnome-software && \
     rpm-ostree cleanup -m
 
 # ==========================================
