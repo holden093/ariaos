@@ -58,6 +58,7 @@ RUN --mount=type=cache,dst=/var/cache \
     libvirt \
     virt-manager \
     qemu-kvm \
+    nodejs-npm \
     ffmpeg \
     x264-libs \
     obs-studio \
