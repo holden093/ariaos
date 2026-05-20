@@ -26,8 +26,9 @@ NixitOS è un'immagine derivata da Fedora Silverblue 44, strutturata seguendo il
 *   **Gestione Hardware Asimmetrica**:
     *   **Intel Arc (Lunar Lake)**: Supporto nativo integrato tramite `intel-compute-runtime` e `intel-level-zero` per l'accelerazione hardware (SYCL/Vulkan) a basso consumo.
     *   **NVIDIA eGPU (On-Demand)**: Driver NVIDIA presenti ma rigorosamente bloccati all'avvio (`blacklist`). L'eGPU viene attivata e disattivata manualmente tramite script dedicati (`egpu-up.sh` e `egpu-down.sh`) solo quando è richiesta la massima potenza di calcolo, garantendo consumi nulli quando non in uso.
-*   **Ottimizzazione Estrema della RAM**:
-    *   Pruning aggressivo dei pacchetti inutilizzati nell'immagine base.
+*   **Minimalismo Estremo**:
+    *   Pruning dei pacchetti ingombranti (come `glibc-all-langpacks`, risparmiando ~220MB).
+    *   **Rimozione di GNOME Software**: Per eliminare notifiche fastidiose e aggiornamenti automatici non desiderati. I Flatpak sono gestiti in modo pulito ed efficiente via terminale.
     *   Configurazione zRAM personalizzata: 16GB (50% della RAM) con algoritmo `zstd`. Questo fornisce un cuscinetto ad altissima compressione per il sistema operativo, lasciando la maggior parte della memoria fisica (32GB) libera per i pesi dei modelli LLM.
 *   **Tuning di Sistema**: Regolazioni `sysctl` per massimizzare la reattività dello swap, ottimizzare i buffer di rete e supportare carichi di lavoro intensivi tramite container (Podman/Distrobox).
 

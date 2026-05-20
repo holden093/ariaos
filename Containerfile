@@ -24,8 +24,6 @@ RUN rpm-ostree install \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-44.noarch.rpm && \
     rpm-ostree override remove \
     glibc-all-langpacks \
-    ModemManager \
-    cups \
     gnome-software && \
     rpm-ostree cleanup -m
 
