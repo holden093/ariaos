@@ -1,0 +1,18 @@
+[Plymouth Theme]
+Name=NixitOS
+Description=Tema di avvio ufficiale per NixitOS (BlueBuild)
+ModuleName=two-step
+
+[two-step]
+ImageDir=/usr/share/plymouth/themes/nixitos
+# Aggiungi questa riga puntando al PNG generato dall'SVG sopra
+LogoFileName=logo.png
+HorizontalAlignment=.5
+VerticalAlignment=.5
+# Sposta il logo leggermente sopra lo spinner di caricamento
+LogoHorizontalAlignment=.5
+LogoVerticalAlignment=.4
+Transition=none
+TransitionDuration=0.0
+BackgroundStartColor=0x000000
+BackgroundEndColor=0x000000

@@ -1,0 +1,7 @@
+# Build output e ISO
+output/
+
+# File di sistema e temporanei
+.DS_Store
+*~
+*.swp
