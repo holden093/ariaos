@@ -6,15 +6,17 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "==> Controllo processi attivi sulla eGPU..."
-# Forza la chiusura di container o script Python che tengono bloccata la GPU
-if command -v nvidia-smi &> /dev/null; then
-    PIDS=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits 2>/dev/null || true)
+# Verifica che nvidia-smi esista E riesca a comunicare col driver senza errori
+if command -v nvidia-smi &> /dev/null && nvidia-smi > /dev/null 2>&1; then
+    PIDS=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits)
     if [ -n "$PIDS" ] && [ "$PIDS" != "No devices found" ]; then
         echo "⚠️ Rilevati processi attivi sulla eGPU (PIDs: $PIDS)."
         echo "    Invio segnale di terminazione (SIGTERM)..."
         echo "$PIDS" | xargs -r kill -15
         sleep 2
     fi
+else
+    echo "    NVIDIA-SMI non risponde o i driver sono già disattivati. Procedo..."
 fi
 
 echo "==> Rimozione moduli NVIDIA dal kernel..."
