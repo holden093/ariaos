@@ -97,7 +97,10 @@ RUN --mount=type=cache,dst=/var/cache \
                    nvidia-powerd.service \
                    nvidia-persistenced.service && \
     # Rimuoviamo i file di configurazione che forzano i parametri modeset (gestiti ora dal blacklist-nvidia.conf)
-    rm -f /etc/modprobe.d/nvidia-modeset.conf
+    rm -f /etc/modprobe.d/nvidia-modeset.conf && \
+    # Rigeneriamo l'initramfs per applicare le esclusioni di dracut definite in build_files
+    # Nota: su bootc/blue-build questo viene gestito durante la creazione dell'immagine
+    echo "NixitOS: NVIDIA is now on-demand only."
 
 # ==========================================
 # 3. BRANDING & IDENTITÀ
