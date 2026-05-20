@@ -24,3 +24,7 @@ This specific configuration is bound to the user's local hardware:
 - **Active Skills:** Use the `nixitos-optimizer` skill to periodically check system efficiency.
 - **Always-Sync Docs:** Every structural change MUST be reflected in both `GEMINI.md` (for the agent) and `README.md` (for the user).
 - **Update Frequency:** Documentation is not static; update it whenever a package is added/removed or a service is tuned.
+
+## 5. Project License
+- **License Type:** GNU General Public License v3.0 (GPL-3.0).
+- **Enforcement:** Ensure any new files or major contributions respect the copyleft nature of the GPL v3.0. The `LICENSE` file in the root directory is the source of truth.

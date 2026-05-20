@@ -41,3 +41,11 @@ NixitOS è un'immagine derivata da Fedora Silverblue 44, strutturata seguendo il
 *   `build_files/`: Directory copiata direttamente nella root `/` del sistema. Contiene script personalizzati, configurazioni kernel (`modprobe.d`, `sysctl.d`) e temi.
 *   `.github/workflows/`: Pipeline CI/CD per generare automaticamente la nuova immagine ad ogni commit.
 *   `.gemini/skills/`: Contiene la skill `nixitos-optimizer`, utilizzata per l'analisi e la manutenzione automatizzata dell'efficienza della codebase.
+
+---
+
+## 📄 Licenza
+
+Questo progetto è rilasciato sotto i termini della licenza **GNU General Public License v3.0 (GPL-3.0)**. 
+
+Essendo NixitOS una configurazione strettamente legata all'hardware dell'autore, la licenza garantisce la libertà di studio e modifica, ma si ribadisce il disclaimer: l'uso su hardware diverso è a totale rischio dell'utente. Consulta il file [LICENSE](LICENSE) per il testo completo della licenza.
