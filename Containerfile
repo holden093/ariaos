@@ -15,37 +15,45 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     chmod 0440 /etc/sudoers.d/egpu
 
 # ==========================================
-# 1b. ABILITAZIONE RPM FUSION & CODEC
+# 1b. ABILITAZIONE RPM FUSION, CODEC & OTTIMIZZAZIONE
 # ==========================================
 
+# Consolidiamo l'installazione dei repository e la rimozione di pacchetti ingombranti/inutili
 RUN rpm-ostree install \
     https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-44.noarch.rpm \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-44.noarch.rpm && \
+    rpm-ostree override remove \
+    glibc-all-langpacks \
+    ModemManager \
+    cups \
+    gnome-software-rpm-ostree && \
     rpm-ostree cleanup -m
+
+# ==========================================
+# 2. PACCHETTI RPM E SERVIZI (Consolidati)
+# ==========================================
 
 RUN --mount=type=cache,dst=/var/cache \
     rpm-ostree install \
-    # Manteniamo solo il driver unificato moderno
+    # --- Codec & Multimedia ---
     libva-intel-media-driver \
     gstreamer1-plugins-bad-freeworld \
     gstreamer1-plugins-ugly \
     gstreamer1-libav \
-    lame && \
-    rpm-ostree cleanup -m
-
-# ==========================================
-# 2. PACCHETTI RPM E SERVIZI
-# ==========================================
-
-RUN --mount=type=cache,dst=/var/cache \
-    rpm-ostree install \
-    # --- Runtime per Intel Arc (Calcolo) ---
+    lame \
+    ffmpeg \
+    x264-libs \
+    # --- Runtime per Intel Arc (Calcolo & LLM) ---
     intel-compute-runtime \
+    intel-level-zero \
     # --- Gestione Hardware & eGPU ---
     bolt \
     pciutils \
     lshw \
     glx-utils \
+    vulkan-loader \
+    vulkan-tools \
+    clinfo \
     # --- Networking & Sysadmin tools ---
     wireguard-tools \
     nmap \
@@ -55,17 +63,15 @@ RUN --mount=type=cache,dst=/var/cache \
     bind-utils \
     tmux \
     jq \
+    # --- Virtualizzazione ---
     libvirt \
     virt-manager \
     qemu-kvm \
+    # --- Sviluppo & Varie ---
     nodejs-npm \
-    ffmpeg \
-    x264-libs \
-    obs-studio \
-    obs-studio-plugin-x264 \
-    # --- Pacchetti utente & Varie ---
     git \
     gh \
+    # --- Pacchetti utente ---
     remmina \
     steam-devices \
     geary \
@@ -74,11 +80,13 @@ RUN --mount=type=cache,dst=/var/cache \
     btop \
     powertop \
     nvtop \
+    obs-studio \
+    obs-studio-plugin-x264 \
     podman-compose \
     distrobox && \
     # --- Pulizia ---
     rpm-ostree cleanup -m && \
-    # --- Abilito servizio di podman all'avvio ---
+    # --- Abilitazione servizi ---
     systemctl enable podman.socket
 
 # ==========================================

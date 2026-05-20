@@ -18,11 +18,16 @@ echo "    Trovato hardware: $lpcie"
 
 echo "==> Caricamento moduli NVIDIA per Compute..."
 # Carica i moduli core gestendo le dipendenze in automatico
-modprobe nvidia
-modprobe nvidia_uvm
+if modprobe nvidia && modprobe nvidia_uvm; then
+    echo "✅ Moduli caricati con successo."
+else
+    echo "❌ Errore: Impossibile caricare i moduli NVIDIA."
+    exit 1
+fi
 
 # Inizializza i file di device in /dev (fondamentale per Podman/Docker)
 if command -v nvidia-modprobe &> /dev/null; then
+    echo "==> Inizializzazione device nodes..."
     nvidia-modprobe -c0 -u
 fi
 
