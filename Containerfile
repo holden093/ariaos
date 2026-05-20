@@ -64,6 +64,7 @@ RUN --mount=type=cache,dst=/var/cache \
     obs-studio-plugin-x264 \
     # --- Pacchetti utente & Varie ---
     git \
+    gh \
     remmina \
     steam-devices \
     geary \
