@@ -93,6 +93,10 @@ RUN --mount=type=cache,dst=/var/cache \
     # --- Abilitazione servizi ---
     systemctl enable podman.socket && \
     # --- Enforce NVIDIA Blacklist & On-Demand policy ---
+    # Rimuoviamo le configurazioni che forzano il caricamento dei driver o del modesetting
+    rm -f /usr/lib/dracut/dracut.conf.d/99-nvidia.conf && \
+    rm -f /usr/lib/modprobe.d/nvidia-modeset.conf && \
+    rm -f /usr/lib/modprobe.d/nvidia.conf && \
     # Disabilitiamo i servizi che forzano il caricamento dei moduli NVIDIA all'avvio
     systemctl mask nvidia-hibernate.service \
                    nvidia-resume.service \
@@ -100,8 +104,6 @@ RUN --mount=type=cache,dst=/var/cache \
                    nvidia-suspend-then-hibernate.service \
                    nvidia-powerd.service \
                    nvidia-persistenced.service && \
-    # Rimuoviamo i file di configurazione che forzano i parametri modeset (gestiti ora dal blacklist-nvidia.conf)
-    rm -f /etc/modprobe.d/nvidia-modeset.conf && \
     # Rimuoviamo kargs di default di bluebuild che forzano il caricamento dei driver
     rm -f /usr/lib/bootc/kargs.d/bluebuild-kargs.toml && \
     # Rigeneriamo l'initramfs per applicare le esclusioni di dracut definite in build_files
