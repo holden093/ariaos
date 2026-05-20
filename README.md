@@ -30,6 +30,9 @@ NixitOS è un'immagine derivata da Fedora Silverblue 44, strutturata seguendo il
     *   Pruning dei pacchetti ingombranti (come `glibc-all-langpacks`), mantenendo solo il supporto essenziale (En/It) per massimizzare lo spazio libero.
     *   **Rimozione di GNOME Software**: Per eliminare notifiche fastidiose e aggiornamenti automatici non desiderati. I Flatpak sono gestiti in modo pulito ed efficiente via terminale.
     *   Configurazione zRAM personalizzata: 16GB (50% della RAM) con algoritmo `zstd`. Questo fornisce un cuscinetto ad altissima compressione per il sistema operativo, lasciando la maggior parte della memoria fisica (32GB) libera per i pesi dei modelli LLM.
+*   **Personalizzazione & Estetica**:
+    *   **Tema Yaru**: Integrazione del tema Ubuntu Yaru (GTK, Icone, Suoni e Shell) per un'estetica moderna e curata.
+    *   **GNOME Tweaks & User Themes**: Inclusione degli strumenti necessari per personalizzare profondamente l'interfaccia, inclusa la possibilità di cambiare il tema della Shell GNOME tramite l'estensione preinstallata.
 *   **Tuning di Sistema**: Regolazioni `sysctl` per massimizzare la reattività dello swap, ottimizzare i buffer di rete e supportare carichi di lavoro intensivi tramite container (Podman/Distrobox).
 
 ## 🛠 Struttura della Repository

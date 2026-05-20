@@ -71,6 +71,10 @@ RUN --mount=type=cache,dst=/var/cache \
     nodejs-npm \
     git \
     gh \
+    # --- UI & Personalizzazione ---
+    yaru-theme \
+    gnome-tweaks \
+    gnome-shell-extension-user-theme \
     # --- Pacchetti utente ---
     remmina \
     steam-devices \
