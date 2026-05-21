@@ -122,15 +122,15 @@ RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NixitOS (BlueBuild Edition)"/' /etc/o
     sed -i 's/^ID=fedora/ID=nixitos/' /etc/os-release && \
     sed -i 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release && \
     sed -i 's|^HOME_URL=.*|HOME_URL="https://git.nixit.it/holden093/NixitOS"|' /etc/os-release && \
-    # Sostituiamo i loghi di GDM/Fedora con il nostro logo
-    cp /usr/share/plymouth/themes/nixitos/logo.png /usr/share/pixmaps/system-logo-white.png && \
-    cp /usr/share/plymouth/themes/nixitos/logo.png /usr/share/pixmaps/fedora-gdm-logo.png || true
+    # Sostituiamo i loghi di GDM/Fedora ridimensionandoli (se 256x256 GDM li mostra sproporzionati)
+    ffmpeg -y -v quiet -i /usr/share/plymouth/themes/nixitos/logo.png -vf "scale=96:96:force_original_aspect_ratio=decrease" /usr/share/pixmaps/system-logo-white.png && \
+    cp /usr/share/pixmaps/system-logo-white.png /usr/share/pixmaps/fedora-gdm-logo.png || true
 
 # ==========================================
 # 4. PLYMOUTH & INITRAMFS
 # ==========================================
 
-RUN cp /usr/share/plymouth/themes/spinner/throbber-*.png /usr/share/plymouth/themes/nixitos/ && \
+RUN cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/nixitos/ && \
     plymouth-set-default-theme nixitos && \
     # Creiamo /var/roothome per evitare che dracut fallisca a causa di /root come symlink rotto nel container
     mkdir -p /var/roothome && \
