@@ -131,6 +131,9 @@ RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NixitOS (BlueBuild Edition)"/' /etc/o
 # ==========================================
 
 RUN cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/nixitos/ && \
+    # Rimpiccioliamo i loghi di plymouth per evitare che siano giganti a schermo in fase di boot
+    ffmpeg -y -v quiet -i /usr/share/plymouth/themes/nixitos/logo.png -vf "scale=128:128:force_original_aspect_ratio=decrease" /usr/share/plymouth/themes/nixitos/bgrt-fallback.png && \
+    ffmpeg -y -v quiet -i /usr/share/plymouth/themes/nixitos/logo.png -vf "scale=64:64:force_original_aspect_ratio=decrease" /usr/share/plymouth/themes/nixitos/watermark.png && \
     plymouth-set-default-theme nixitos && \
     # Creiamo /var/roothome per evitare che dracut fallisca a causa di /root come symlink rotto nel container
     mkdir -p /var/roothome && \
