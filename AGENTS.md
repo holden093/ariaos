@@ -42,3 +42,7 @@ This specific configuration is bound to the user's local hardware:
 ## 7. Project License
 - **License Type:** GNU General Public License v3.0 (GPL-3.0).
 - **Enforcement:** Ensure any new files or major contributions respect the copyleft nature of the GPL v3.0. The `LICENSE` file in the root directory is the source of truth.
+
+## 8. Backup & Restore Capabilities
+- **TUI Scripts:** NixitOS provides native interactive TUI scripts (`nixitos-home-backup` and `nixitos-home-restore`) located in `build_files/usr/bin/` to safely export and import the `/var/home` Btrfs subvolume across clean reinstallations.
+- **Methodology:** They rely on Btrfs `send` and `receive` streams compressed via `zstd`, alongside `dialog` and `pv` for the UI. Future agents modifying the storage layout or subvolume naming scheme must ensure these scripts are updated to reflect those changes.

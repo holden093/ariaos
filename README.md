@@ -90,10 +90,28 @@ Questo garantisce un'installazione **completamente stateless e dichiarativa**, l
 
 ---
 
+## 💾 Backup & Restore della Home (TUI)
+
+NixitOS include due script interattivi (con interfaccia a menu nel terminale) per gestire l'esportazione e l'importazione sicura dei tuoi dati personali in previsione di reinstallazioni pulite del sistema. Questi tool sfruttano la potenza nativa di Btrfs (`send`/`receive`) garantendo backup perfetti bit-per-bit, inclusi permessi e contesti SELinux, e comprimendo i dati on-the-fly con `zstd`.
+
+### Come esportare la tua Home
+Assicurati di aver collegato un disco USB formattato (ext4/btrfs/exfat) ed esegui:
+```bash
+sudo nixitos-home-backup
+```
+Un menu guidato ti farà selezionare il disco di destinazione e genererà un file compresso contenente l'intera snapshot della tua `/var/home`.
+
+### Come ripristinare la Home (dopo una reinstallazione)
+Appena reinstallato NixitOS, **prima ancora di fare il login grafico**, passa a una tty (es. `Ctrl+Alt+F3`), collega il disco col backup ed esegui:
+```bash
+sudo nixitos-home-restore
+```
+Lo script ti farà selezionare il disco, rimpiazzerà la `/var/home` vuota di sistema con quella storicizzata, la renderà read-write e preparerà il sistema. Al termine basterà riavviare.
+
+---
 
 ## 📄 Licenza
 
-Questo progetto è rilasciato sotto i termini della licenza **GNU General Public License v3.0 (GPL-3.0)**. 
+Questo progetto è rilasciato sotto i termini della licenza **GNU General Public License v3.0 (GPL-3.0)**.
 
 Essendo NixitOS una configurazione strettamente legata all'hardware dell'autore, la licenza garantisce la libertà di studio e modifica, ma si ribadisce il disclaimer: l'uso su hardware diverso è a totale rischio dell'utente. Consulta il file [LICENSE](LICENSE) per il testo completo della licenza.
-
