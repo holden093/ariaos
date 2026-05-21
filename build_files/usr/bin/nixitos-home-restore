@@ -77,33 +77,22 @@ if [ $? -ne 0 ]; then
   exit 0
 fi
 
-clear
-echo "========================================================="
-echo " Importazione Backup Home (Zstd -> Btrfs Receive)"
-echo " Sorgente: $BACKUP_FILE"
-echo "========================================================="
-echo "Attendere il completamento dell'operazione..."
-
 # Rimuovi vecchio restore pendente se presente
 btrfs subvolume delete /var/home-backup >/dev/null 2>&1 || true
 
+FILE_SIZE=$(stat -c%s "$BACKUP_FILE")
+
 set -o pipefail
-# Usa pv per mostrare il progresso della decompressione
-if zstdcat "$BACKUP_FILE" | pv -brt | btrfs receive /var/ >/dev/null; then
-  echo ""
-  echo "✅ Flusso ricevuto con successo. Preparazione della nuova home..."
-else
-  echo ""
-  echo "❌ Errore durante l'importazione del backup."
-  dialog --msgbox "Si è verificato un errore durante l'importazione (btrfs receive fallito)." 8 50
+if ! ( pv -n -s "$FILE_SIZE" "$BACKUP_FILE" | zstdcat 2>/dev/null | btrfs receive /var/ >/dev/null 2>&1 ) 2>&1 | dialog --backtitle "NixitOS - Restore" --title "Importazione" --gauge "Decompressione e Ripristino (Zstd -> Btrfs)...\nSorgente: $BACKUP_FILE\nAttendere il completamento." 10 70; then
+  dialog --backtitle "NixitOS - Restore" --title "Errore" --msgbox "Si è verificato un errore durante l'importazione (btrfs receive fallito o stream interrotto)." 8 50
   [ $TEMP_MOUNT -eq 1 ] && umount "$MOUNT_POINT" && rm -rf "$MOUNT_POINT"
   exit 1
 fi
 set +o pipefail
 
-# Swap della home
-echo "Sostituzione dell'attuale /var/home con quella ripristinata..."
+dialog --backtitle "NixitOS - Restore" --infobox "Flusso ricevuto con successo. Preparazione della nuova home..." 5 60
 
+# Swap della home
 # Se /var/home è un subvolume vuoto generato dalla reinstallazione, lo cancelliamo
 if btrfs subvolume show /var/home &> /dev/null; then
   btrfs subvolume delete /var/home >/dev/null 2>&1
@@ -113,23 +102,18 @@ fi
 
 # La snapshot ricevuta è read-only, facciamo uno snapshot RW
 if ! btrfs subvolume snapshot /var/home-backup /var/home >/dev/null 2>&1; then
-   echo "❌ Impossibile rendere read-write la home. Il sistema potrebbe essere in uno stato inconsistente."
+   dialog --backtitle "NixitOS - Restore" --title "Errore Critico" --msgbox "Impossibile rendere read-write la home. Il sistema potrebbe essere in uno stato inconsistente." 8 60
    exit 1
 fi
 
 # Pulizia
+dialog --backtitle "NixitOS - Restore" --infobox "Pulizia in corso..." 5 50
 btrfs subvolume delete /var/home-backup >/dev/null 2>&1 || true
 
 if [ $TEMP_MOUNT -eq 1 ]; then
-  echo "Smontaggio disco in corso..."
   umount "$MOUNT_POINT"
   rm -rf "$MOUNT_POINT"
 fi
 
-dialog --msgbox "Ripristino completato con successo!\n\nÈ necessario riavviare il sistema affinché tutte le applicazioni e i servizi leggano la nuova home." 10 60
-
+dialog --backtitle "NixitOS - Restore" --title "Completato" --msgbox "Ripristino completato con successo!\n\nÈ necessario riavviare il sistema affinché tutte le applicazioni e i servizi leggano la nuova home." 10 60
 clear
-echo "========================================================="
-echo "✅ Ripristino completato con successo!"
-echo "   Per favore riavvia il sistema."
-echo "========================================================="

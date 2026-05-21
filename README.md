@@ -101,12 +101,37 @@ sudo nixitos-home-backup
 ```
 Un menu guidato ti farà selezionare il disco di destinazione e genererà un file compresso contenente l'intera snapshot della tua `/var/home`.
 
-### Come ripristinare la Home (dopo una reinstallazione)
-Appena reinstallato NixitOS, **prima ancora di fare il login grafico**, passa a una tty (es. `Ctrl+Alt+F3`), collega il disco col backup ed esegui:
-```bash
-sudo nixitos-home-restore
-```
-Lo script ti farà selezionare il disco, rimpiazzerà la `/var/home` vuota di sistema con quella storicizzata, la renderà read-write e preparerà il sistema. Al termine basterà riavviare.
+### Come ripristinare il Sistema e la Home (Reinstallazione Completa)
+
+Se devi reinstallare tutto partendo da zero, questa è la procedura esatta per passare da un'installazione pulita di Fedora a NixitOS con tutti i tuoi dati ripristinati:
+
+1. **Installa Fedora (Silverblue/Kinoite/Base)**:
+   - Avvia l'installer standard di Fedora (Anaconda).
+   - Durante il partizionamento (Automatico o Custom), **assicurati che venga creato un subvolume Btrfs separato per `/home`** (che su sistemi OSTree/bootc diventerà `/var/home`).
+   - Completa l'installazione e avvia il sistema appena installato.
+
+2. **Rebase su NixitOS (bootc/ostree)**:
+   - Apri il terminale sul nuovo sistema Fedora ed esegui il rebase all'immagine immutabile di NixitOS.
+   - Se hai installato una versione nativa `bootc`:
+     ```bash
+     sudo bootc switch ghcr.io/holden093/nixitos:latest
+     ```
+   - Se hai installato Fedora Silverblue classica (basata su `rpm-ostree`):
+     ```bash
+     sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/holden093/nixitos:latest
+     ```
+   - Attendi il completamento del download e dell'applicazione dell'immagine.
+   - **Riavvia il sistema**.
+
+3. **Ripristino della Home (nixitos-home-restore)**:
+   - Al riavvio, ti troverai dentro NixitOS. **Prima ancora di fare il login grafico**, passa a una console TTY (es. `Ctrl+Alt+F3`).
+   - Collega il disco USB contenente il tuo backup.
+   - Esegui lo script di ripristino interattivo:
+     ```bash
+     sudo nixitos-home-restore
+     ```
+   - Lo script ti farà selezionare il disco, rimpiazzerà la `/var/home` vuota di sistema con la tua snapshot storicizzata (tramite Btrfs Receive), la renderà read-write e preparerà i permessi.
+   - Al termine, riavvia un'ultima volta per permettere a GNOME e ai servizi di caricare la tua vecchia Home.
 
 ---
 

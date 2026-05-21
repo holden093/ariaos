@@ -91,38 +91,24 @@ if ! btrfs subvolume snapshot -r /var/home /var/home-backup >/dev/null 2>&1; the
 fi
 
 # Esportazione
-clear
-echo "========================================================="
-echo " Esportazione e Compressione Backup Home (Btrfs -> Zstd)"
-echo " Destinazione: $BACKUP_FILE"
-echo "========================================================="
-echo "Attendere il completamento dell'operazione..."
+# Esportazione stima
+ESTIMATED_SIZE=$(df --output=used -B1 /var/home | tail -1 | tr -d ' ')
 
 set -o pipefail
-# pv -brt mostra byte trasferiti, rate e tempo trascorso
-if btrfs send /var/home-backup 2>/dev/null | pv -brt | zstd -T0 > "$BACKUP_FILE"; then
-  clear
-  echo "========================================================="
-  echo "✅ Backup completato con successo!"
-  echo "File salvato in: $BACKUP_FILE"
-  echo "========================================================="
-  dialog --msgbox "Backup completato con successo!\nFile: $BACKUP_FILE" 8 60
+if ! ( btrfs send /var/home-backup 2>/dev/null | pv -n -s "$ESTIMATED_SIZE" | zstd -T0 > "$BACKUP_FILE" ) 2>&1 | dialog --backtitle "NixitOS - Backup" --title "Esportazione in corso" --gauge "Compressione e salvataggio (Btrfs -> Zstd)...\nL'operazione può richiedere svariati minuti.\nDestinazione: $BACKUP_FILE" 10 70; then
+  dialog --backtitle "NixitOS - Backup" --title "Errore" --msgbox "Si è verificato un errore durante l'esportazione del backup." 8 50
 else
-  clear
-  echo "❌ Errore durante l'esportazione del backup."
-  dialog --msgbox "Si è verificato un errore durante l'esportazione." 8 50
+  dialog --backtitle "NixitOS - Backup" --title "Completato" --msgbox "Backup completato con successo!\nFile salvato in:\n$BACKUP_FILE" 8 60
 fi
 set +o pipefail
 
 # Pulizia
-echo "Rimozione snapshot temporanea..."
+dialog --backtitle "NixitOS - Backup" --infobox "Rimozione snapshot temporanea e pulizia..." 5 50
 btrfs subvolume delete /var/home-backup >/dev/null 2>&1
 
 if [ $TEMP_MOUNT -eq 1 ]; then
-  echo "Smontaggio disco in corso..."
   umount "$MOUNT_POINT"
   rm -rf "$MOUNT_POINT"
-  echo "Disco $TARGET_DEV smontato in sicurezza."
 fi
 
-echo "Operazione conclusa."
+clear

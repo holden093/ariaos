@@ -111,9 +111,6 @@ RUN --mount=type=cache,dst=/var/cache \
                    nvidia-persistenced.service && \
     # Rimuoviamo kargs di default di bluebuild che forzano il caricamento dei driver
     rm -f /usr/lib/bootc/kargs.d/bluebuild-kargs.toml && \
-    # Rigeneriamo l'initramfs per applicare le esclusioni di dracut definite in build_files
-    # Su bootc, questo assicura che il nuovo initramfs non contenga i driver
-    dracut -f --regenerate-all && \
     echo "NixitOS: NVIDIA is now on-demand only."
 
 # ==========================================
@@ -131,7 +128,9 @@ RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NixitOS (BlueBuild Edition)"/' /etc/o
 # ==========================================
 
 RUN cp /usr/share/plymouth/themes/spinner/throbber-*.png /usr/share/plymouth/themes/nixitos/ && \
-    plymouth-set-default-theme nixitos
+    plymouth-set-default-theme nixitos && \
+    # Rigeneriamo l'initramfs ALLA FINE per applicare le esclusioni NVIDIA, TPM e includere il nuovo logo Plymouth
+    dracut -f --regenerate-all
 
 # ==========================================
 # 5. VERIFICA E LINTING
