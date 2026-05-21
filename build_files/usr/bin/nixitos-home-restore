@@ -93,17 +93,25 @@ set +o pipefail
 dialog --backtitle "NixitOS - Restore" --infobox "Flusso ricevuto con successo. Preparazione della nuova home..." 5 60
 
 # Swap della home
-# Se /var/home è un subvolume vuoto generato dalla reinstallazione, lo cancelliamo
-if btrfs subvolume show /var/home &> /dev/null; then
-  btrfs subvolume delete /var/home >/dev/null 2>&1
-else
-  mv /var/home /var/home.old_$(date +%s) >/dev/null 2>&1 || true
+# Evitiamo 'btrfs subvolume delete' perché fallisce (e fa crashare lo script per via del set -e) 
+# se la home contiene subvolumi annidati (es. Podman/Distrobox).
+OLD_HOME="/var/home.old_$(date +%s)"
+if [ -e /var/home ]; then
+  mv /var/home "$OLD_HOME" >/dev/null 2>&1 || true
 fi
 
-# La snapshot ricevuta è read-only, facciamo uno snapshot RW
-if ! btrfs subvolume snapshot /var/home-backup /var/home >/dev/null 2>&1; then
-   dialog --backtitle "NixitOS - Restore" --title "Errore Critico" --msgbox "Impossibile rendere read-write la home. Il sistema potrebbe essere in uno stato inconsistente." 8 60
-   exit 1
+# Se /var/home esiste ancora (es. se era un mountpoint impossibile da rinominare)
+if [ -e /var/home ]; then
+  # Svuotiamo il più possibile e usiamo reflink per ripristinare i dati
+  find /var/home -mindepth 1 -delete 2>/dev/null || true
+  cp -a --reflink=auto /var/home-backup/. /var/home/ >/dev/null 2>&1 || true
+else
+  # Mv ha funzionato, la destinazione è libera. Facciamo uno snapshot RW pulito.
+  if ! btrfs subvolume snapshot /var/home-backup /var/home >/dev/null 2>&1; then
+     dialog --backtitle "NixitOS - Restore" --title "Errore Critico" --msgbox "Impossibile rendere read-write la home. Il sistema potrebbe essere in uno stato inconsistente." 8 60
+     mv "$OLD_HOME" /var/home >/dev/null 2>&1 || true
+     exit 1
+  fi
 fi
 
 # Pulizia
