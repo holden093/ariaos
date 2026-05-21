@@ -5,13 +5,11 @@ ModuleName=two-step
 
 [two-step]
 ImageDir=/usr/share/plymouth/themes/nixitos
-# Aggiungi questa riga puntando al PNG generato dall'SVG sopra
-LogoFileName=logo.png
+# Il modulo two-step ignora LogoFileName, ma cerca automaticamente watermark.png e bgrt-fallback.png
 HorizontalAlignment=.5
-VerticalAlignment=.5
-# Sposta il logo leggermente sopra lo spinner di caricamento
-LogoHorizontalAlignment=.5
-LogoVerticalAlignment=.4
+VerticalAlignment=.7
+WatermarkHorizontalAlignment=.5
+WatermarkVerticalAlignment=.96
 Transition=none
 TransitionDuration=0.0
 BackgroundStartColor=0x000000
