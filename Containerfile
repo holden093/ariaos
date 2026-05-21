@@ -121,7 +121,10 @@ RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NixitOS (BlueBuild Edition)"/' /etc/o
     sed -i 's/^NAME=.*/NAME="NixitOS"/' /etc/os-release && \
     sed -i 's/^ID=fedora/ID=nixitos/' /etc/os-release && \
     sed -i 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release && \
-    sed -i 's|^HOME_URL=.*|HOME_URL="https://git.nixit.it/holden093/NixitOS"|' /etc/os-release
+    sed -i 's|^HOME_URL=.*|HOME_URL="https://git.nixit.it/holden093/NixitOS"|' /etc/os-release && \
+    # Sostituiamo i loghi di GDM/Fedora con il nostro logo
+    cp /usr/share/plymouth/themes/nixitos/logo.png /usr/share/pixmaps/system-logo-white.png && \
+    cp /usr/share/plymouth/themes/nixitos/logo.png /usr/share/pixmaps/fedora-gdm-logo.png || true
 
 # ==========================================
 # 4. PLYMOUTH & INITRAMFS
