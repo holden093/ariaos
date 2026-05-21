@@ -87,6 +87,7 @@ RUN --mount=type=cache,dst=/var/cache \
     obs-studio \
     obs-studio-plugin-x264 \
     podman-compose \
+    ripgrep \
     distrobox && \
     # --- Pulizia ---
     rpm-ostree cleanup -m && \
