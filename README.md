@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.svg" alt="NixitOS Logo" width="200"/>
+  <img src="logo.png" alt="NixitOS Logo" width="200"/>
   <h1>NixitOS</h1>
   <p><em>Un sistema operativo immutabile, minimale e ottimizzato per workload AI locali.</em></p>
 </div>
