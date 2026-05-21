@@ -79,6 +79,8 @@ RUN --mount=type=cache,dst=/var/cache \
     gnome-tweaks \
     gnome-shell-extension-user-theme \
     # --- Pacchetti utente ---
+    loupe \
+    evince \
     remmina \
     steam-devices \
     geary \
