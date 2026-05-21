@@ -129,6 +129,8 @@ RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NixitOS (BlueBuild Edition)"/' /etc/o
 
 RUN cp /usr/share/plymouth/themes/spinner/throbber-*.png /usr/share/plymouth/themes/nixitos/ && \
     plymouth-set-default-theme nixitos && \
+    # Creiamo /var/roothome per evitare che dracut fallisca a causa di /root come symlink rotto nel container
+    mkdir -p /var/roothome && \
     # Rigeneriamo l'initramfs ALLA FINE per applicare le esclusioni NVIDIA, TPM e includere il nuovo logo Plymouth
     dracut -f --regenerate-all
 
