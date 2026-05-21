@@ -11,7 +11,7 @@ FROM ghcr.io/blue-build/base-images/fedora-silverblue-nvidia:44
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     rsync -a /ctx/ / && \
-    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh && \
+    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/egpu-steam.sh && \
     chmod 0440 /etc/sudoers.d/egpu
 
 # ==========================================
@@ -48,6 +48,7 @@ RUN --mount=type=cache,dst=/var/cache \
     bolt \
     pciutils \
     lshw \
+    lm_sensors \
     glx-utils \
     vulkan-loader \
     vulkan-tools \
@@ -79,6 +80,7 @@ RUN --mount=type=cache,dst=/var/cache \
     remmina \
     steam-devices \
     geary \
+    gedit \
     vlc \
     rbw \
     btop \

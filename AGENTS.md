@@ -20,11 +20,25 @@ This specific configuration is bound to the user's local hardware:
 - **RAM Efficiency:** The system has 32GB of physical RAM, primarily intended for loading large weights in `llama.cpp`. 
   - zRAM is explicitly configured to 16GB with the `zstd` algorithm to compress OS/background tasks and prevent OOM without stealing physical RAM from the model. Do not alter this balance without explicit user confirmation.
 
-## 4. Documentation & Maintenance
+## 4. Disk Encryption & TPM 2.0 Security
+- **LUKS2 and TPM2 Bindings:** NixitOS supports modern LUKS2 disk encryption bound to TPM 2.0 via `systemd-cryptenroll`.
+- **Declarative Zero-Config Paradigm:** To uphold the atomic, immutable GitOps philosophy of `bootc`, manual modification of `/etc/crypttab` on the host is strongly discouraged. The system relies on the **Discoverable Partitions Specification (DPS)**. Under GPT, `systemd-gpt-auto-generator` automatically discovers the root LUKS2 volume at boot, reads the TPM2 token from the LUKS2 JSON metadata header, and unlocks it without host state modifications.
+- **Dracut Configuration:** Because `bootc` builds are performed inside containers where no TPM is present, `crypt` and `tpm2-tss` dracut modules are explicitly forced in [tpm2.conf](file:///var/home/kevin/GIT/NixitOS/build_files/etc/dracut.conf.d/tpm2.conf) to guarantee that they are packaged into the initramfs.
+- **TPM PCR Strategy:**
+  - Standard binding should use **PCR 7** (Secure Boot state) and optionally **PCR 0** (Firmware).
+  - **AVOID PCR 8 and 9** on `bootc` systems, as these measure kernel command lines and initramfs content. Since `bootc update` pulls new images with updated kernels and initramfs, binding to PCR 8/9 would trigger a recovery passphrase prompt on every single system upgrade.
+
+
+## 5. Empirical Validation & Testing Mandate (Strict Protocol)
+- **Test Before Act:** NEVER propose a modification without first performing empirical tests to verify the actual state of the system. Do not make naive assumptions about standard configurations.
+- **Verification:** Always use tools like `lsmod`, `systemctl`, `lsblk`, or `--dry-run` flags (e.g., for `dracut` or package managers) to cross-reference the real system state before acting.
+- **Post-Fix Validation:** Every change must be rigorously validated post-implementation to guarantee syntactical correctness and ensure no regressions were introduced.
+
+## 6. Documentation & Maintenance
 - **Active Skills:** Use the `nixitos-optimizer` skill to periodically check system efficiency.
-- **Always-Sync Docs:** Every structural change MUST be reflected in both `GEMINI.md` (for the agent) and `README.md` (for the user).
+- **Always-Sync Docs:** Every structural change MUST be reflected in both `AGENTS.md` (for the agent) and `README.md` (for the user).
 - **Update Frequency:** Documentation is not static; update it whenever a package is added/removed or a service is tuned.
 
-## 5. Project License
+## 7. Project License
 - **License Type:** GNU General Public License v3.0 (GPL-3.0).
 - **Enforcement:** Ensure any new files or major contributions respect the copyleft nature of the GPL v3.0. The `LICENSE` file in the root directory is the source of truth.
