@@ -76,7 +76,7 @@ Per passare da un'installazione pulita di Fedora a NixitOS con tutti i dati:
 
 Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 
-* **`egpu-up.sh`**: Attiva la eGPU NVIDIA in **Modalità Compute**. Carica solo `nvidia` e `nvidia_uvm`. Ottimo per inferenza AI.
+* **`egpu-up.sh`**: Attiva la eGPU NVIDIA in **Modalità Compute**. Carica solo `nvidia` e `nvidia_uvm` e isola la GPU dalle app desktop assegnandola al gruppo `ai-compute`. Ottimo per inferenza AI. (Per eseguire modelli, usa `sudo` o lancia le tue app sotto il gruppo `ai-compute`, es. `sudo -g ai-compute podman run ...`).
 * **`egpu-steam.sh`**: Attiva la eGPU NVIDIA in **Modalità Gaming**. Carica lo stack grafico e DRM completo. (Richiede disconnessione fredda).
 * **`egpu-down.sh`**: Rimuove i driver NVIDIA in modo pulito dal kernel, permettendo lo scollegamento fisico (hot-unplug) del cavo Thunderbolt se in Modalità Compute.
 * **`nixitos-home-backup`**: Utility TUI basata su `btrfs send` per esportare in sicurezza la `/var/home` in un file zstd.

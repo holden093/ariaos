@@ -30,6 +30,11 @@ fi
 if command -v nvidia-modprobe &> /dev/null; then
     echo "==> Inizializzazione device nodes..."
     nvidia-modprobe -c0 -u
+    # Isola la GPU dalle app desktop assegnandola al gruppo ai-compute e rimuovendo le ACL utente
+    echo "==> Restrizione permessi per Compute Mode..."
+    setfacl -b /dev/nvidia* 2>/dev/null || true
+    chgrp ai-compute /dev/nvidia* 2>/dev/null || true
+    chmod 0660 /dev/nvidia*
 fi
 
 echo "==> Verifica stato CUDA..."
