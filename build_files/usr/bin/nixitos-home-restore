@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
-# Verifica esecuzione come root
+# Controllo stringente sui privilegi di root
 if [ "$EUID" -ne 0 ]; then
-  echo "Questo script deve essere eseguito come root (es. sudo nixitos-home-restore)."
-  exit 1
+    echo "❌ Errore: Questo script deve essere eseguito come root o con sudo."
+    exit 1
 fi
 
 # Verifica dipendenze

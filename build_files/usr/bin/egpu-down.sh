@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
+# Controllo stringente sui privilegi di root
 if [ "$EUID" -ne 0 ]; then
-    echo "❌ Errore: Questo script deve essere eseguito como root o con sudo."
+    echo "❌ Errore: Questo script deve essere eseguito come root o con sudo."
     exit 1
 fi
 
@@ -29,7 +30,13 @@ modprobe -r nvidia 2>/dev/null
 # Verifica finale sullo stato del kernel
 if lsmod | grep -q nvidia; then
     echo "❌ Errore: Alcuni moduli NVIDIA sono ancora in uso dal sistema."
-    echo "    Impossibile scollegare la eGPU in sicurezza in questo momento."
+    echo "    La eGPU potrebbe essere in uso da applicazioni di calcolo residue"
+    echo "    oppure (se montata per il Gaming) è agganciata al server grafico (GNOME/Wayland)."
+    echo ""
+    echo "    💡 SOLUZIONE PER IL GAMING:"
+    echo "    La modalità Gaming richiede una disconnessione 'fredda'. Per scollegare"
+    echo "    il cavo in sicurezza, devi prima chiudere i giochi e fare il LOG-OUT"
+    echo "    dalla sessione (oppure riavviare). Questo forzerà il rilascio della GPU."
     exit 1
 else
     echo "✅ Moduli rimossi con successo."

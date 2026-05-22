@@ -10,8 +10,9 @@ This file contains foundational mandates and context for any AI agent working on
 This specific configuration is bound to the user's local hardware:
 - **Primary GPU & Compute:** Intel Arc (Lunar Lake). Packages like `intel-compute-runtime` and `intel-level-zero` are critical for everyday acceleration and base LLM inference via SYCL/Vulkan.
 - **On-Demand eGPU:** NVIDIA GPU via Thunderbolt. 
-  - **CRITICAL RULE:** NVIDIA kernel modules (`nvidia`, `nvidia_uvm`, `nouveau`) MUST remain blacklisted in `/etc/modprobe.d/blacklist-nvidia.conf`. 
-  - The eGPU is strictly activated manually via `egpu-up.sh` when heavy compute is needed. Do not introduce packages or services that force the NVIDIA driver to load at boot or integrate it with the Wayland/GNOME display server.
+  - **CRITICAL RULE:** NVIDIA kernel modules (`nvidia`, `nvidia_uvm`, `nouveau`, `nvidia_modeset`, `nvidia_drm`) MUST remain blacklisted via `install <module> /bin/false` in `/etc/modprobe.d/blacklist-nvidia.conf`. Do not use `alias <module> off` as it breaks explicit `--ignore-install` loading.
+  - **Compute Mode (Hot-Unplug Supported):** Activated via `egpu-up.sh`. Loads only `nvidia` and `nvidia_uvm`. Safe to hot-unplug via `egpu-down.sh` without crashing the display server.
+  - **Gaming Mode (Cold-Unplug Required):** Activated via `egpu-steam.sh`. Loads the full stack including `nvidia_modeset` and `nvidia_drm`. Once loaded, the Wayland/GNOME display server captures the DRM device. The eGPU CANNOT be hot-unplugged; the user MUST log out or reboot to release the GPU before running `egpu-down.sh` or disconnecting.
 
 ## 3. Optimization Goals (AI/LLM Focus)
 - **Minimalism:** Keep the base image as small as possible. 

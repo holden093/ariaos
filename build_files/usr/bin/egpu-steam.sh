@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-# Controllo privilegi di root (sarà invocato via pkexec dal launcher)
+# Controllo stringente sui privilegi di root
 if [ "$EUID" -ne 0 ]; then
-    echo "❌ Errore: Questo script deve essere eseguito come root (es. via pkexec o sudo)."
+    echo "❌ Errore: Questo script deve essere eseguito come root o con sudo."
     exit 1
 fi
 
@@ -33,4 +33,13 @@ if command -v nvidia-modprobe &> /dev/null; then
     nvidia-modprobe -c0 -u
 fi
 
-echo "✅ eGPU NVIDIA configurata per il gaming! Il launcher avvierà Steam a breve."
+echo "==> Verifica stato GPU..."
+if command -v nvidia-smi &> /dev/null; then
+    echo "------------------------------------------------"
+    nvidia-smi -L
+    echo "------------------------------------------------"
+    echo "✅ eGPU NVIDIA configurata per il gaming! Il launcher avvierà Steam a breve."
+else
+    echo "❌ Errore: moduli caricati ma nvidia-smi non risponde."
+    exit 1
+fi
