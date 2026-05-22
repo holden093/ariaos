@@ -123,23 +123,17 @@ RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NixitOS (BlueBuild Edition)"/' /etc/o
     sed -i 's/^NAME=.*/NAME="NixitOS"/' /etc/os-release && \
     sed -i 's/^ID=fedora/ID=nixitos/' /etc/os-release && \
     sed -i 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release && \
-    sed -i 's|^HOME_URL=.*|HOME_URL="https://git.nixit.it/holden093/NixitOS"|' /etc/os-release && \
-    # Sostituiamo i loghi di GDM/Fedora ridimensionandoli (una via di mezzo per GDM, es. 192x192)
-    ffmpeg -y -v quiet -i /usr/share/plymouth/themes/nixitos/logo.png -vf "scale=192:192:force_original_aspect_ratio=decrease" /usr/share/pixmaps/system-logo-white.png && \
-    cp /usr/share/pixmaps/system-logo-white.png /usr/share/pixmaps/fedora-gdm-logo.png || true
+    sed -i 's|^HOME_URL=.*|HOME_URL="https://git.nixit.it/holden093/NixitOS"|' /etc/os-release
 
 # ==========================================
 # 4. PLYMOUTH & INITRAMFS
 # ==========================================
 
 RUN cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/nixitos/ && \
-    # Rimpiccioliamo i loghi di plymouth per evitare che siano giganti a schermo in fase di boot
-    ffmpeg -y -v quiet -i /usr/share/plymouth/themes/nixitos/logo.png -vf "scale=256:256:force_original_aspect_ratio=decrease" /usr/share/plymouth/themes/nixitos/bgrt-fallback.png && \
-    ffmpeg -y -v quiet -i /usr/share/plymouth/themes/nixitos/logo.png -vf "scale=128:128:force_original_aspect_ratio=decrease" /usr/share/plymouth/themes/nixitos/watermark.png && \
     plymouth-set-default-theme nixitos && \
     # Creiamo /var/roothome per evitare che dracut fallisca a causa di /root come symlink rotto nel container
     mkdir -p /var/roothome && \
-    # Rigeneriamo l'initramfs ALLA FINE per applicare le esclusioni NVIDIA, TPM e includere il nuovo logo Plymouth
+    # Rigeneriamo l'initramfs ALLA FINE per applicare le esclusioni NVIDIA e TPM
     dracut -f --regenerate-all
 
 # ==========================================

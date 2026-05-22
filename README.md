@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="logo.png" alt="NixitOS Logo" width="200"/>
   <h1>NixitOS</h1>
   <p><em>Un sistema operativo immutabile, minimale e ottimizzato per workload AI locali.</em></p>
 </div>
@@ -32,7 +31,6 @@ NixitOS è un'immagine derivata da Fedora Silverblue 44, strutturata seguendo il
     *   Configurazione zRAM personalizzata: 16GB (50% della RAM) con algoritmo `zstd`. Questo fornisce un cuscinetto ad altissima compressione per il sistema operativo, lasciando la maggior parte della memoria fisica (32GB) libera per i pesi dei modelli LLM.
 *   **Personalizzazione & Estetica**:
     *   **Tema Yaru**: Integrazione del tema Ubuntu Yaru (GTK, Icone, Suoni e Shell) per un'estetica moderna e curata.
-    *   **Branding di Sistema**: Inclusione di un logo customizzato per la fase di avvio (Plymouth) e per la schermata di login GDM (correttamente scalato).
     *   **GNOME Tweaks & User Themes**: Inclusione degli strumenti necessari per personalizzare profondamente l'interfaccia, inclusa la possibilità di cambiare il tema della Shell GNOME tramite l'estensione preinstallata.
 *   **Tuning di Sistema**: Regolazioni `sysctl` per massimizzare la reattività dello swap, ottimizzare i buffer di rete e supportare carichi di lavoro intensivi tramite container (Podman/Distrobox).
 

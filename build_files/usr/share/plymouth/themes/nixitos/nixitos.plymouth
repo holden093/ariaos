@@ -5,7 +5,7 @@ ModuleName=two-step
 
 [two-step]
 ImageDir=/usr/share/plymouth/themes/nixitos
-# Il modulo two-step ignora LogoFileName, ma cerca automaticamente watermark.png e bgrt-fallback.png
+# Il modulo two-step cerca automaticamente watermark.png e bgrt-fallback.png
 HorizontalAlignment=.5
 VerticalAlignment=.7
 WatermarkHorizontalAlignment=.5
