@@ -20,6 +20,7 @@
     * **Modalità Gaming**: Carica lo stack DRM completo per Wayland. Richiede disconnessione "fredda" (Log-Out/Riavvio).
 * **Minimalismo Estremo**: Pruning dei pacchetti ingombranti (mantenendo solo il supporto essenziale En/It). Rimozione di GNOME Software e uso esclusivo di CLI per pacchetti e Flatpak.
 * **Ottimizzazione RAM per AI**: zRAM configurata a 16GB (algoritmo `zstd`) per comprimere il sistema operativo e lasciare la memoria fisica (32GB) libera per i modelli LLM.
+* **Audio a Bassa Latenza**: Tuning avanzato del kernel Fedora (`threadirqs`, `preempt=full`) combinato con priorità real-time (`rtirq` e `realtime-setup`) per prestazioni ottimali nella registrazione audio e uso DAW.
 * **Sicurezza & Cifratura TPM 2.0**: Supporto nativo LUKS2 automatizzato tramite chip TPM 2.0 usando Discoverable Partitions Specification (DPS).
 
 ## 🚦 Avvio Rapido
@@ -36,11 +37,16 @@ Per passare da un'installazione pulita di Fedora a NixitOS con tutti i dati:
    ```bash
    sudo nixitos-home-restore
    ```
-4. **Associa la chiave LUKS al TPM 2.0** (Opzionale per Zero-Config):
+4. **Abilita Audio a Bassa Latenza** (Obbligatorio per produzione audio):
+   Aggiungi il tuo utente ai gruppi corretti per sfruttare i privilegi `rtprio`:
+   ```bash
+   sudo usermod -aG realtime,audio $USER
+   ```
+5. **Associa la chiave LUKS al TPM 2.0** (Opzionale per Zero-Config):
    ```bash
    sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/nvme0n1p3
    ```
-5. **Riavvia** e accedi alla tua nuova sessione completamente configurata.
+6. **Riavvia** e accedi alla tua nuova sessione completamente configurata.
 
 ## 🛠️ Stack Tecnico
 
