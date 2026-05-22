@@ -50,4 +50,4 @@ This specific configuration is bound to the user's local hardware:
 
 ## 9. Low-Latency Audio Optimizations
 - **Kernel Tuning:** NixitOS uses standard Fedora kernels but simulates real-time behavior via `bootc` kargs (`threadirqs` and `preempt=full` defined in `build_files/usr/lib/bootc/kargs.d/audio.toml`). Do NOT replace the kernel with third-party RT kernels (like CachyOS) as it breaks pre-compiled NVIDIA drivers.
-- **Priority & CPU Management:** `realtime-setup`, `rtirq`, and `tuned` (with `tuned-profiles-audioproduction`) are installed. Users MUST be added to the `realtime` and `audio` groups to take advantage of PAM `limits.d` capabilities.
+- **Priority & CPU Management:** `realtime-setup` and `tuned` (with `tuned-profiles-realtime`) are installed. Users MUST be added to the `realtime` and `audio` groups to take advantage of PAM `limits.d` capabilities.

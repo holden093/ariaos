@@ -98,13 +98,12 @@ RUN --mount=type=cache,dst=/var/cache \
     ckan \
     # --- Audio & Low-Latency ---
     realtime-setup \
-    rtirq \
     tuned \
-    tuned-profiles-audioproduction && \
+    tuned-profiles-realtime && \
     # --- Pulizia ---
     rpm-ostree cleanup -m && \
     # --- Abilitazione servizi ---
-    systemctl enable podman.socket rtirq.service tuned.service && \
+    systemctl enable podman.socket tuned.service && \
     # --- Enforce NVIDIA Blacklist & On-Demand policy ---
     # Rimuoviamo le configurazioni che forzano il caricamento dei driver o del modesetting
     rm -f /usr/lib/dracut/dracut.conf.d/99-nvidia.conf && \
