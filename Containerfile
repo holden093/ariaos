@@ -32,6 +32,8 @@ RUN rpm-ostree install \
 # ==========================================
 
 RUN --mount=type=cache,dst=/var/cache \
+    # Fix for Mono (CKAN dependency) missing cert.pem during rpm-ostree post-install
+    ln -s /etc/pki/tls/certs/ca-bundle.crt /etc/pki/tls/cert.pem && \
     rpm-ostree install \
     # --- Codec & Multimedia ---
     libva-intel-media-driver \
