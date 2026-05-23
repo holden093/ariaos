@@ -7,17 +7,23 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "==> Controllo processi attivi sulla eGPU..."
-# Verifica che nvidia-smi esista E riesca a comunicare col driver senza errori
-if command -v nvidia-smi &> /dev/null && nvidia-smi > /dev/null 2>&1; then
-    PIDS=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits)
-    if [ -n "$PIDS" ] && [ "$PIDS" != "No devices found" ]; then
-        echo "⚠️ Rilevati processi attivi sulla eGPU (PIDs: $PIDS)."
+# Usiamo lsof per trovare QUALSIASI processo che tenga aperti i file device, non solo quelli che nvidia-smi ritiene attivi
+if ls /dev/nvidia* 1> /dev/null 2>&1; then
+    PIDS=$(lsof -t /dev/nvidia* 2>/dev/null | sort -u | tr '\n' ' ')
+    if [ -n "$PIDS" ]; then
+        echo "⚠️ Rilevati processi attivi sulla eGPU:"
+        for pid in $PIDS; do
+            pname=$(ps -p "$pid" -o comm= 2>/dev/null || echo "Processo Sconosciuto")
+            echo "    - $pname (PID: $pid)"
+        done
         echo "    Invio segnale di terminazione (SIGTERM)..."
         echo "$PIDS" | xargs -r kill -15
         sleep 2
+    else
+        echo "    Nessun processo attivo rilevato sui device nodes."
     fi
 else
-    echo "    NVIDIA-SMI non risponde o i driver sono già disattivati. Procedo..."
+    echo "    I device nodes non esistono, probabile che i moduli siano già disattivati. Procedo..."
 fi
 
 echo "==> Rimozione moduli NVIDIA dal kernel..."

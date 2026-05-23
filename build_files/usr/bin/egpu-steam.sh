@@ -31,6 +31,8 @@ fi
 if command -v nvidia-modprobe &> /dev/null; then
     echo "==> Inizializzazione device nodes..."
     nvidia-modprobe -c0 -u
+    # Attende che udev finisca di processare i nuovi device
+    udevadm settle
 fi
 
 echo "==> Verifica stato GPU..."
