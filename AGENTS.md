@@ -11,8 +11,8 @@ This specific configuration is bound to the user's local hardware:
 - **Primary GPU & Compute:** Intel Arc (Lunar Lake). Packages like `intel-compute-runtime` and `intel-level-zero` are critical for everyday acceleration and base LLM inference via SYCL/Vulkan.
 - **On-Demand eGPU:** NVIDIA GPU via Thunderbolt. 
   - **CRITICAL RULE:** NVIDIA kernel modules (`nvidia`, `nvidia_uvm`, `nouveau`, `nvidia_modeset`, `nvidia_drm`) MUST remain blacklisted via `install <module> /bin/false` in `/etc/modprobe.d/blacklist-nvidia.conf`. Do not use `alias <module> off` as it breaks explicit `--ignore-install` loading.
-  - **Compute Mode (Hot-Unplug Supported):** Activated via `egpu-up.sh`. Loads only `nvidia` and `nvidia_uvm`. Safe to hot-unplug via `egpu-down.sh` without crashing the display server. Note: `egpu-up.sh` restricts `/dev/nvidia*` permissions to the `ai-compute` group (0660) and strips user ACLs. This prevents GTK/Vulkan desktop apps from hooking the GPU. To run inference, the user must use `sudo` or execute their tools under the `ai-compute` group (e.g., `sudo -g ai-compute`).
-  - **Gaming Mode (Cold-Unplug Required):** Activated via `egpu-steam.sh`. Loads the full stack including `nvidia_modeset` and `nvidia_drm`. Once loaded, the Wayland/GNOME display server captures the DRM device. The eGPU CANNOT be hot-unplugged; the user MUST log out or reboot to release the GPU before running `egpu-down.sh` or disconnecting.
+  - **Usage:** Activated via `egpu-up.sh`. Loads the full stack (`nvidia`, `nvidia_uvm`, `nvidia_modeset`, `nvidia_drm`) and sets wide-open permissions (`0666`) to allow both compute and display server (Wayland/GNOME) to hook the GPU.
+  - **Disconnection (Cold-Unplug Required):** Because `egpu-up.sh` loads DRM modules and allows the display server to capture the device, the eGPU CANNOT be hot-unplugged safely. The user MUST log out or reboot to release the GPU before running `egpu-down.sh` or disconnecting.
 
 ## 3. Optimization Goals (AI/LLM Focus)
 - **Minimalism:** Keep the base image as small as possible. 

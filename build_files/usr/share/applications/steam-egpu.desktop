@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=Steam (NVIDIA eGPU)
-Comment=Avvia Steam sfruttando il PRIME Render Offload sulla eGPU NVIDIA
-Exec=sh -c "pkexec /usr/bin/egpu-steam.sh && flatpak run --env=__NV_PRIME_RENDER_OFFLOAD=1 --env=__GLX_VENDOR_LIBRARY_NAME=nvidia com.valvesoftware.Steam"
-Icon=steam
-Terminal=false
-Type=Application
-Categories=Network;FileTransfer;Game;

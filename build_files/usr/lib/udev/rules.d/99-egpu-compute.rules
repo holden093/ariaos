@@ -1,5 +1,0 @@
-# Forza i permessi dei device node NVIDIA per la modalità compute.
-# Se il modulo nvidia_drm NON è caricato, significa che siamo in Compute Mode (egpu-up.sh).
-# In questo caso, blocchiamo i device node NVIDIA per impedire a Steam/Mutter o ad altre
-# applicazioni desktop di agganciare la eGPU.
-ACTION=="add|change", KERNEL=="nvidia*", TEST!="/sys/module/nvidia_drm", GROUP="ai-compute", MODE="0660"

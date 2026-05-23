@@ -36,13 +36,12 @@ modprobe -r nvidia 2>/dev/null
 # Verifica finale sullo stato del kernel
 if lsmod | grep -q nvidia; then
     echo "❌ Errore: Alcuni moduli NVIDIA sono ancora in uso dal sistema."
-    echo "    La eGPU potrebbe essere in uso da applicazioni di calcolo residue"
-    echo "    oppure (se montata per il Gaming) è agganciata al server grafico (GNOME/Wayland)."
+    echo "    La eGPU potrebbe essere in uso da applicazioni residue"
+    echo "    oppure agganciata al server grafico (GNOME/Wayland)."
     echo ""
-    echo "    💡 SOLUZIONE PER IL GAMING:"
-    echo "    La modalità Gaming richiede una disconnessione 'fredda'. Per scollegare"
-    echo "    il cavo in sicurezza, devi prima chiudere i giochi e fare il LOG-OUT"
-    echo "    dalla sessione (oppure riavviare). Questo forzerà il rilascio della GPU."
+    echo "    💡 SOLUZIONE:"
+    echo "    Se la eGPU è usata dal display server, devi fare il LOG-OUT"
+    echo "    dalla sessione (oppure riavviare) per rilasciare la GPU."
     exit 1
 else
     echo "✅ Moduli rimossi con successo."

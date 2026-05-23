@@ -16,30 +16,31 @@ if ! lpcie=$(lspci | grep -i nvidia); then
 fi
 echo "    Trovato hardware: $lpcie"
 
-echo "==> Caricamento moduli NVIDIA per Compute..."
+echo "==> Caricamento moduli NVIDIA..."
 # Carica i moduli core gestendo le dipendenze in automatico
 # Usiamo --ignore-install per bypassare il blocco di sicurezza nel file modprobe.d
-if modprobe --ignore-install nvidia && modprobe --ignore-install nvidia_uvm; then
+if modprobe --ignore-install nvidia && \
+   modprobe --ignore-install nvidia_modeset && \
+   modprobe --ignore-install nvidia_uvm && \
+   modprobe --ignore-install nvidia_drm; then
     echo "✅ Moduli caricati con successo."
 else
     echo "❌ Errore: Impossibile caricare i moduli NVIDIA."
     exit 1
 fi
 
-# Inizializza i file di device in /dev (fondamentale per Podman/Docker)
+# Inizializza i file di device in /dev (fondamentale per Podman/Docker e Wayland)
 if command -v nvidia-modprobe &> /dev/null; then
     echo "==> Inizializzazione device nodes..."
     nvidia-modprobe -c0 -u
     
-    # Attende che udev e logind finiscano di applicare le loro regole e ACL (uaccess) asincrone
+    # Forza udev a rivalutare i permessi
+    udevadm trigger --action=change /dev/nvidia*
     udevadm settle
     sleep 1
     
-    # Isola la GPU dalle app desktop assegnandola al gruppo ai-compute e rimuovendo le ACL utente
-    echo "==> Restrizione permessi per Compute Mode..."
-    setfacl -b /dev/nvidia* 2>/dev/null || true
-    chgrp ai-compute /dev/nvidia* 2>/dev/null || true
-    chmod 0660 /dev/nvidia*
+    # Imposta permessi aperti 0666 per permettere a utente normale di usarla
+    chmod 0666 /dev/nvidia* 2>/dev/null || true
 fi
 
 echo "==> Verifica stato CUDA..."
@@ -47,7 +48,7 @@ if command -v nvidia-smi &> /dev/null; then
     echo "------------------------------------------------"
     nvidia-smi -L
     echo "------------------------------------------------"
-    echo "✅ eGPU NVIDIA configurata e pronta per l'inferenza."
+    echo "✅ eGPU NVIDIA configurata e pronta all'uso."
 else
     echo "❌ Errore: moduli caricati ma nvidia-smi non risponde."
     exit 1

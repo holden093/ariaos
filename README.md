@@ -15,9 +15,7 @@
 * **Immutabilità & GitOps**: Ogni modifica al sistema operativo è tracciata in questa repository (nel `Containerfile` o in `build_files/`) e "buildata" in un'immagine container.
 * **Gestione Hardware Asimmetrica**:
   * **Intel Arc (Lunar Lake)**: Supporto nativo integrato tramite `intel-compute-runtime` e `intel-level-zero` per l'accelerazione hardware (SYCL/Vulkan) a basso consumo.
-  * **NVIDIA eGPU (On-Demand)**: Driver NVIDIA bloccati all'avvio (`blacklist`). Attivazione e disattivazione manuale gestita in due modalità:
-    * **Modalità Compute**: Carica solo il runtime essenziale per LLM. Supporta l'hot-unplug pulito.
-    * **Modalità Gaming**: Carica lo stack DRM completo per Wayland. Richiede disconnessione "fredda" (Log-Out/Riavvio).
+  * **NVIDIA eGPU (On-Demand)**: Driver NVIDIA bloccati all'avvio (`blacklist`). Attivazione manuale tramite script dedicato che carica l'intero stack (incluso DRM). Richiede disconnessione "fredda" (Log-Out/Riavvio) per il rilascio.
 * **Minimalismo Estremo**: Pruning dei pacchetti ingombranti (mantenendo solo il supporto essenziale En/It). Rimozione di GNOME Software e uso esclusivo di CLI per pacchetti e Flatpak.
 * **Ottimizzazione RAM per AI**: zRAM configurata a 16GB (algoritmo `zstd`) per comprimere il sistema operativo e lasciare la memoria fisica (32GB) libera per i modelli LLM.
 * **Audio a Bassa Latenza**: Tuning avanzato del kernel Fedora (`threadirqs`, `preempt=full`) combinato con priorità real-time (`realtime-setup` e `tuned`) per prestazioni ottimali nella registrazione audio e uso DAW.
@@ -76,9 +74,8 @@ Per passare da un'installazione pulita di Fedora a NixitOS con tutti i dati:
 
 Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 
-* **`egpu-up.sh`**: Attiva la eGPU NVIDIA in **Modalità Compute**. Carica solo `nvidia` e `nvidia_uvm` e isola la GPU dalle app desktop assegnandola al gruppo `ai-compute`. Ottimo per inferenza AI. (Per eseguire modelli, usa `sudo` o lancia le tue app sotto il gruppo `ai-compute`, es. `sudo -g ai-compute podman run ...`).
-* **`egpu-steam.sh`**: Attiva la eGPU NVIDIA in **Modalità Gaming**. Carica lo stack grafico e DRM completo. (Richiede disconnessione fredda).
-* **`egpu-down.sh`**: Rimuove i driver NVIDIA in modo pulito dal kernel, permettendo lo scollegamento fisico (hot-unplug) del cavo Thunderbolt se in Modalità Compute.
+* **`egpu-up.sh`**: Attiva la eGPU NVIDIA caricando l'intero stack di driver (inclusi `nvidia_modeset` e `nvidia_drm`) e impostando permessi aperti (`0666`). Consente l'uso sia per inferenza AI che per rendering grafico (Wayland/GNOME).
+* **`egpu-down.sh`**: Rimuove i driver NVIDIA in modo pulito dal kernel. Poiché lo script di avvio carica anche i driver DRM, prima di eseguire questo script è necessario effettuare il LOG-OUT o riavviare per liberare la GPU dal display server.
 * **`nixitos-home-backup`**: Utility TUI basata su `btrfs send` per esportare in sicurezza la `/var/home` in un file zstd.
 * **`nixitos-home-restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup su installazioni pulite.
 
