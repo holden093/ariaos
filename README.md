@@ -17,6 +17,7 @@
   * **Intel Arc (Lunar Lake)**: Supporto nativo integrato tramite `intel-compute-runtime` e `intel-level-zero` per l'accelerazione hardware (SYCL/Vulkan) a basso consumo.
   * **NVIDIA eGPU (On-Demand)**: Driver NVIDIA bloccati all'avvio (`blacklist`). Attivazione manuale tramite script dedicato che carica l'intero stack (incluso DRM). Richiede disconnessione "fredda" (Log-Out/Riavvio) per il rilascio.
 * **Minimalismo Estremo**: Pruning dei pacchetti ingombranti (mantenendo solo il supporto essenziale En/It). Rimozione di GNOME Software e uso esclusivo di CLI per pacchetti e Flatpak.
+* **Storage GitOps (Subvolumi Dinamici)**: Utilizzo nativo di `systemd-tmpfiles` per creare automaticamente subvolumi Btrfs per i dati pesanti (es. `llms`, `games`) in `/var`. Questi vengono poi collegati alla `/var/home` via symlink, garantendo che i backup della Home tramite snapshot siano leggerissimi ed escludano automaticamente questi enormi file.
 * **Ottimizzazione RAM per AI**: zRAM configurata a 16GB (algoritmo `zstd`) per comprimere il sistema operativo e lasciare la memoria fisica (32GB) libera per i modelli LLM.
 * **Audio a Bassa Latenza**: Tuning avanzato del kernel Fedora (`threadirqs`, `preempt=full`) combinato con priorità real-time (`realtime-setup` e `tuned`) per prestazioni ottimali nella registrazione audio e uso DAW.
 * **Sicurezza & Cifratura TPM 2.0**: Supporto nativo LUKS2 automatizzato tramite chip TPM 2.0 usando Discoverable Partitions Specification (DPS).
