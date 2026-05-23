@@ -31,8 +31,13 @@ fi
 if command -v nvidia-modprobe &> /dev/null; then
     echo "==> Inizializzazione device nodes..."
     nvidia-modprobe -c0 -u
-    # Attende che udev finisca di processare i nuovi device
+    # Forza udev a rivalutare i permessi ora che nvidia_drm è caricato (disabilita il blocco compute)
+    udevadm trigger --action=change /dev/nvidia*
+    # Attende che udev finisca di processare i nuovi device e i trigger
     udevadm settle
+    
+    # Assicuriamoci che i permessi siano corretti per l'utente corrente
+    chmod 0666 /dev/nvidia* 2>/dev/null || true
 fi
 
 echo "==> Verifica stato GPU..."

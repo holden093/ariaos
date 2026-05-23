@@ -34,6 +34,7 @@ This specific configuration is bound to the user's local hardware:
 - **Test Before Act:** NEVER propose a modification without first performing empirical tests to verify the actual state of the system. Do not make naive assumptions about standard configurations.
 - **Verification:** Always use tools like `lsmod`, `systemctl`, `lsblk`, or `--dry-run` flags (e.g., for `dracut` or package managers) to cross-reference the real system state before acting.
 - **Post-Fix Validation:** Every change must be rigorously validated post-implementation to guarantee syntactical correctness and ensure no regressions were introduced.
+- **CRITICAL TIMEOUT RULE:** If a command or build (like `podman build`) goes into timeout waiting for a permission prompt, it means the user is away from the computer. Do NOT assume the command succeeded, and do NOT bypass the verification step. You must STOP, report the timeout, and wait for the user. NEVER take anything for granted.
 
 ## 6. Documentation & Maintenance
 - **Active Skills:** Use the `nixitos-optimizer` skill to periodically check system efficiency.
