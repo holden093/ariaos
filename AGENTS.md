@@ -20,6 +20,7 @@ This specific configuration is bound to the user's local hardware:
   - Prefer Flatpaks or Distroboxes for GUI applications not explicitly requested in the base image.
 - **RAM Efficiency:** The system has 32GB of physical RAM, primarily intended for loading large weights in `llama.cpp`. 
   - zRAM is explicitly configured to 16GB with the `zstd` algorithm to compress OS/background tasks and prevent OOM without stealing physical RAM from the model. Do not alter this balance without explicit user confirmation.
+- **CPU & Storage Efficiency:** The NMI watchdog is disabled (`nowatchdog`) to allow deeper C-states. The Btrfs root filesystem is explicitly mounted with `compress=zstd:1` via `bootc` kargs (`build_files/usr/lib/bootc/kargs.d/battery.toml`) to reduce write amplification and save battery.
 
 ## 4. Disk Encryption & TPM 2.0 Security
 - **LUKS2 and TPM2 Bindings:** NixitOS supports modern LUKS2 disk encryption bound to TPM 2.0 via `systemd-cryptenroll`.
@@ -50,6 +51,7 @@ This specific configuration is bound to the user's local hardware:
 - **Methodology:** They rely on Btrfs `send` and `receive` streams compressed via `zstd`, alongside `dialog` and `pv` for the UI. Future agents modifying the storage layout or subvolume naming scheme must ensure these scripts are updated to reflect those changes.
 - **Dynamic Subvolumes (GitOps Storage):** Heavy data like LLM weights and Steam games are excluded from the `/var/home` backup. This is achieved declaratively via `systemd-tmpfiles` (`build_files/usr/lib/tmpfiles.d/nixitos-subvols.conf`), which automatically creates native Btrfs subvolumes in `/var` (`/var/llms`, `/var/games`) and exposes them via symlinks in the user's home directory. Since Btrfs snapshots are not recursive, `nixitos-home-backup` only backs up the symlinks.
 
-## 9. Low-Latency Audio Optimizations
-- **Kernel Tuning:** NixitOS uses standard Fedora kernels but simulates real-time behavior via `bootc` kargs (`threadirqs` and `preempt=full` defined in `build_files/usr/lib/bootc/kargs.d/audio.toml`). Do NOT replace the kernel with third-party RT kernels (like CachyOS) as it breaks pre-compiled NVIDIA drivers.
-- **Priority & CPU Management:** `realtime-setup` and `tuned` (with `tuned-profiles-realtime`) are installed. Users MUST be added to the `realtime` and `audio` groups to take advantage of PAM `limits.d` capabilities.
+## 9. Low-Latency Audio Optimizations (Dynamic Tuning)
+- **Kernel Tuning:** To maximize battery life and allow deep C-states on Intel Lunar Lake, NixitOS explicitly avoids boot-time realtime kernel arguments like `threadirqs` and `preempt=full`. The system relies on the standard Fedora kernel scheduling, which provides sufficiently low latencies out-of-the-box via PipeWire. Do NOT replace the kernel with third-party RT kernels (like CachyOS) as it breaks pre-compiled NVIDIA drivers.
+- **Dynamic DAW Tuning:** When launching a DAW (e.g., Reaper), users should use the `nixitos-daw-launcher` wrapper script. This script dynamically switches the system to the `latency-performance` tuned profile via `sudo` (allowed passwordless via `/etc/sudoers.d/tuned`) for the duration of the session, and restores `balanced-battery` upon exit.
+- **Priority Management:** `realtime-setup` is installed. Users MUST be added to the `realtime` and `audio` groups to take advantage of PAM `limits.d` capabilities.

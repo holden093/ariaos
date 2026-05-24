@@ -1,0 +1,1 @@
+kargs = ["nowatchdog", "rootflags=subvol=root,compress=zstd:1"]

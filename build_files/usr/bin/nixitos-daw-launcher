@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# NixitOS Dynamic DAW Launcher
+# Cambia il profilo energetico prima di avviare la DAW e lo ripristina alla chiusura.
+
+if [ -z "$1" ]; then
+    echo "Usage: nixitos-daw-launcher <executable> [args...]"
+    exit 1
+fi
+
+echo "NixitOS: Attivazione profilo latency-performance per la DAW..."
+sudo /usr/sbin/tuned-adm profile latency-performance
+
+# Esegue la DAW passando tutti gli argomenti e aspetta che venga chiusa
+"$@"
+
+echo "NixitOS: Ripristino profilo balanced-battery..."
+sudo /usr/sbin/tuned-adm profile balanced-battery
