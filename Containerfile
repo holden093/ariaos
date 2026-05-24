@@ -99,6 +99,7 @@ RUN --mount=type=cache,dst=/var/cache \
     distrobox \
     ckan \
     borgbackup \
+    btrfsmaintenance \
     # --- Audio & Low-Latency ---
     realtime-setup \
     tuned \
@@ -106,7 +107,7 @@ RUN --mount=type=cache,dst=/var/cache \
     # --- Pulizia ---
     rpm-ostree cleanup -m && \
     # --- Abilitazione servizi ---
-    systemctl enable podman.socket tuned.service && \
+    systemctl enable podman.socket tuned.service btrfs-scrub.timer btrfs-balance.timer && \
     # --- Enforce NVIDIA Blacklist & On-Demand policy ---
     # Rimuoviamo le configurazioni che forzano il caricamento dei driver o del modesetting
     rm -f /usr/lib/dracut/dracut.conf.d/99-nvidia.conf && \

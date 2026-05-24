@@ -23,6 +23,7 @@ This specific configuration is bound to the user's local hardware:
 - **RAM Efficiency:** The system has 32GB of physical RAM, primarily intended for loading large weights in `llama.cpp`. 
   - zRAM is explicitly configured to 16GB with the `zstd` algorithm to compress OS/background tasks and prevent OOM without stealing physical RAM from the model. Do not alter this balance without explicit user confirmation.
 - **CPU & Storage Efficiency:** The NMI watchdog is disabled (`nowatchdog`) to allow deeper C-states. The Btrfs root filesystem is explicitly mounted with `compress=zstd:1` via `bootc` kargs (`build_files/usr/lib/bootc/kargs.d/battery.toml`) to reduce write amplification and save battery.
+  - **BTRFS Health (btrfsmaintenance):** To proactively prevent bit-rot and ensure metadata integrity over time, the `btrfsmaintenance` package is integrated in the base image. Systemd timers (`btrfs-scrub.timer` and `btrfs-balance.timer`) are explicitly enabled to perform regular asynchronous checks in the background.
 
 ## 4. Disk Encryption & TPM 2.0 Security
 - **LUKS2 and TPM2 Bindings:** NixitOS supports modern LUKS2 disk encryption bound to TPM 2.0 via `systemd-cryptenroll`.
@@ -40,7 +41,7 @@ This specific configuration is bound to the user's local hardware:
 - **CRITICAL TIMEOUT RULE:** If a command or build (like `podman build`) goes into timeout waiting for a permission prompt, it means the user is away from the computer. Do NOT assume the command succeeded, and do NOT bypass the verification step. You must STOP, report the timeout, and wait for the user. NEVER take anything for granted.
 
 ## 6. Documentation & Maintenance
-- **Active Skills:** Use the `nixitos-optimizer` skill to periodically check system efficiency.
+- **Active Skills:** Use the `nixitos-optimizer` skill to periodically check system efficiency, and the `nixitos-posture-check` skill to verify alignment with this repo's desired state.
 - **Always-Sync Docs:** Every structural change MUST be reflected in both `AGENTS.md` (for the agent) and `README.md` (for the user).
 - **Update Frequency:** Documentation is not static; update it whenever a package is added/removed or a service is tuned.
 
