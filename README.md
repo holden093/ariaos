@@ -38,10 +38,11 @@ Per passare da un'installazione pulita di Fedora a NixitOS con tutti i dati:
    sudo nixitos-home-restore
    ```
 4. **Abilita Audio a Bassa Latenza** (Obbligatorio per produzione audio):
-   Aggiungi il tuo utente ai gruppi corretti per sfruttare i privilegi `rtprio`:
+   Affinché le ottimizzazioni in tempo reale e lo script `nixitos-daw-launcher` funzionino, devi aggiungere il tuo utente ai gruppi `realtime` e `audio`:
    ```bash
    sudo usermod -aG realtime,audio $USER
    ```
+   > **Nota Importante:** Dopo aver eseguito il comando, è **obbligatorio** effettuare un Logout e Login (o riavviare il sistema) affinché le modifiche ai gruppi abbiano effetto.
 5. **Associa la chiave LUKS al TPM 2.0** (Opzionale per Zero-Config):
    ```bash
    sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7 /dev/nvme0n1p3
@@ -78,8 +79,9 @@ Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 
 * **`egpu-up.sh`**: Attiva la eGPU NVIDIA caricando l'intero stack di driver (inclusi `nvidia_modeset` e `nvidia_drm`) e impostando permessi aperti (`0666`). Consente l'uso sia per inferenza AI che per rendering grafico (Wayland/GNOME).
 * **`egpu-down.sh`**: Rimuove i driver NVIDIA in modo pulito dal kernel. Poiché lo script di avvio carica anche i driver DRM, prima di eseguire questo script è necessario effettuare il LOG-OUT o riavviare per liberare la GPU dal display server.
-* **`nixitos-home-backup`**: Utility TUI basata su `btrfs send` per esportare in sicurezza la `/var/home` in un file zstd.
-* **`nixitos-home-restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup su installazioni pulite.
+* **Pika Backup (Raccomandato)**: Questa è l'app ufficiale per i backup quotidiani, incrementali e navigabili. Poiché è profondamente integrata con GNOME, è un'eccezione alla regola "Niente Flatpak per app critiche" e va installata manualmente dall'utente via Flathub (`org.gnome.World.PikaBackup`). Perfetta per eseguire il backup sul NAS (SMB/SFTP) o dischi esterni in stile Time Machine.
+* **`nixitos-home-backup`**: Utility TUI legacy per il Disaster Recovery "Bare-Metal". Esporta la `/var/home` in un file monolitico zstd sfruttando `btrfs send`. Da usare per backup integrali offline su USB prima di formattare.
+* **`nixitos-home-restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup monolitico zstd su installazioni pulite.
 
 ## 📖 Documentazione
 

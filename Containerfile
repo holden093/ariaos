@@ -98,6 +98,7 @@ RUN --mount=type=cache,dst=/var/cache \
     ripgrep \
     distrobox \
     ckan \
+    borgbackup \
     # --- Audio & Low-Latency ---
     realtime-setup \
     tuned \
