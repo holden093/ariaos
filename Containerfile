@@ -37,12 +37,6 @@ RUN --mount=type=cache,dst=/var/cache \
     rpm-ostree install \
     # --- Codec & Multimedia ---
     libva-intel-media-driver \
-    gstreamer1-plugins-bad-freeworld \
-    gstreamer1-plugins-ugly \
-    gstreamer1-libav \
-    lame \
-    ffmpeg \
-    x264-libs \
     # --- Runtime per Intel Arc (Calcolo & LLM) ---
     intel-compute-runtime \
     intel-level-zero \
