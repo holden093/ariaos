@@ -24,7 +24,17 @@ RUN rpm-ostree install \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-44.noarch.rpm && \
     rpm-ostree override remove \
     glibc-all-langpacks \
-    gnome-software && \
+    gnome-software \
+    ibus-typing-booster \
+    ibus-anthy \
+    ibus-anthy-python \
+    ibus-hangul \
+    ibus-libpinyin \
+    ibus-m17n \
+    ibus-unikey \
+    google-noto-sans-cjk-fonts \
+    cldr-emoji-annotation \
+    cldr-emoji-annotation-dtd && \
     rpm-ostree cleanup -m
 
 # ==========================================
@@ -102,6 +112,7 @@ RUN --mount=type=cache,dst=/var/cache \
     rpm-ostree cleanup -m && \
     # --- Abilitazione servizi ---
     systemctl enable podman.socket tuned.service btrfs-scrub.timer btrfs-balance.timer && \
+    systemctl mask ModemManager.service && \
     # --- Enforce NVIDIA Blacklist & On-Demand policy ---
     # Rimuoviamo le configurazioni che forzano il caricamento dei driver o del modesetting
     rm -f /usr/lib/dracut/dracut.conf.d/99-nvidia.conf && \
