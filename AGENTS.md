@@ -61,9 +61,9 @@ NixitOS implements a two-tier backup architecture:
 - **Dynamic DAW Tuning:** When launching a DAW (e.g., Reaper), users should use the `nixitos-daw-launcher` wrapper script. This script dynamically switches the system to the `latency-performance` tuned profile via `sudo` (allowed passwordless via `/etc/sudoers.d/tuned`) for the duration of the session, and restores `balanced-battery` upon exit.
 - **Priority Management:** `realtime-setup` is installed. Users MUST be added to the `realtime` and `audio` groups to take advantage of PAM `limits.d` capabilities.
 
-## 10. Local LLM Architecture (NixitLLMs Integration)
-- **Dynamic Hardware Switching:** The system includes a unified LLM wrapper script (`nixitos-llm`) located in `build_files/usr/bin/nixitos-llm`. This script orchestrates the local `llama.cpp` container and handles hardware disparities on the fly.
-  - If the `nvidia_uvm` kernel module is loaded (indicating the eGPU is active), the script dynamically creates a `compose.override.yaml` and a `Containerfile.cuda` to deploy the workload natively to the CUDA container, reserving all GPUs.
-  - If the module is missing, it falls back to the embedded Intel Arc iGPU via SYCL.
-- **Stateless Operations:** To keep the host OS immutable and free of dependency sprawl (like Python/pip packages in the host root), the `nixitos-llm download` command fetches GGUF models directly from the Hugging Face Hub by spinning up an ephemeral, disposable `python:3.11-slim` Podman container.
-- **Model Storage:** All downloaded models and configs must reside in `/var/llms` (symlinked to `~/LLMs/ggufs`). This guarantees they survive OS image updates and avoid bloating standard `/var/home` backups.
+## 10. Architettura LLM Locale (Integrazione NixitLLMs)
+- **Switch Hardware Dinamico:** Il sistema include uno script wrapper unificato per LLM (`nixitos-llm`) posizionato in `build_files/usr/bin/nixitos-llm`. Questo script orchestra il container locale `llama.cpp` e gestisce le differenze hardware al volo.
+  - Se il modulo kernel `nvidia_uvm` è caricato (indicando che l'eGPU è attiva), lo script crea dinamicamente un `compose.override.yaml` e un `Containerfile.cuda` per distribuire il carico nativamente sul container CUDA, riservando tutte le GPU.
+  - Se il modulo è assente, ripiega sull'iGPU integrata Intel Arc tramite SYCL.
+- **Operazioni Stateless:** Per mantenere il sistema operativo host immutabile e libero dalla proliferazione di dipendenze (come pacchetti Python/pip nella root dell'host), il comando `nixitos-llm download` recupera i modelli GGUF direttamente dall'Hugging Face Hub avviando un container Podman effimero e usa e getta basato su `python:3.11-slim`.
+- **Archiviazione Modelli:** Tutti i modelli scaricati e le configurazioni devono risiedere in `/var/llms` (con symlink a `~/LLMs/ggufs`). Questo garantisce che sopravvivano agli aggiornamenti dell'immagine OS e non appesantiscano i backup standard di `/var/home`.

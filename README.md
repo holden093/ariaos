@@ -83,18 +83,18 @@ Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 * **`nixitos-home-backup`**: Utility TUI legacy per il Disaster Recovery "Bare-Metal". Esporta la `/var/home` in un file monolitico zstd sfruttando `btrfs send`. Da usare per backup integrali offline su USB prima di formattare.
 * **`nixitos-home-restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup monolitico zstd su installazioni pulite.
 
-## 🤖 Local AI & NixitLLMs
+## 🤖 AI Locale & NixitLLMs
 
-NixitOS features a deeply integrated local AI workflow via the `nixitos-llm` wrapper, orchestrating `llama.cpp` Podman containers.
+NixitOS include un workflow AI locale profondamente integrato tramite il wrapper `nixitos-llm`, che orchestra i container Podman di `llama.cpp`.
 
-The engine seamlessly detects your hardware context:
-- **iGPU Mode:** Defaults to Intel Arc (SYCL) for battery-efficient inference.
-- **eGPU Mode:** If the Thunderbolt NVIDIA eGPU is plugged in and authorized, `nixitos-llm` dynamically reconfigures the stack to use the CUDA container and offload to the RTX 3060.
+Il motore rileva dinamicamente il contesto hardware:
+- **Modalità iGPU:** Predefinita su Intel Arc (SYCL) per un'inferenza a basso consumo energetico.
+- **Modalità eGPU:** Se la eGPU NVIDIA Thunderbolt è collegata e autorizzata, `nixitos-llm` riconfigura dinamicamente lo stack per usare il container CUDA e scaricare il carico sulla RTX 3060.
 
-### Common AI Commands
-- `nixitos-llm up` / `nixitos-llm down` - Start/Stop the inference server.
-- `nixitos-llm download <hf_repo> <filename>` - Safely fetch GGUF weights via a stateless, ephemeral container.
-- `nixitos-llm bench-all` - Run the evaluation suite (requires `MODEL=<router-section>`).
+### Comandi AI Comuni
+- `nixitos-llm up` / `nixitos-llm down` - Avvia/Ferma il server di inferenza.
+- `nixitos-llm download <hf_repo> <filename>` - Scarica in sicurezza i pesi GGUF tramite un container stateless ed effimero (es. `nixitos-llm download unsloth/gemma-4-E4B-it-GGUF *Q8_K_XL.gguf`).
+- `nixitos-llm bench-all` - Esegue la suite di validazione (richiede `MODEL=<router-section>`).
 
 ## 📖 Documentazione
 
