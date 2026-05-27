@@ -11,7 +11,7 @@ FROM ghcr.io/blue-build/base-images/fedora-silverblue-nvidia:44
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     rsync -a /ctx/ / && \
-    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/nixitos-home-backup /usr/bin/nixitos-home-restore /usr/bin/nixitos-daw-launcher && \
+    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/nixitos-home-backup /usr/bin/nixitos-home-restore /usr/bin/nixitos-daw-launcher /usr/bin/nixitos-llm && \
     chmod 0440 /etc/sudoers.d/egpu /etc/sudoers.d/tuned
 
 # ==========================================
