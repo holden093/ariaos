@@ -83,6 +83,19 @@ Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 * **`nixitos-home-backup`**: Utility TUI legacy per il Disaster Recovery "Bare-Metal". Esporta la `/var/home` in un file monolitico zstd sfruttando `btrfs send`. Da usare per backup integrali offline su USB prima di formattare.
 * **`nixitos-home-restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup monolitico zstd su installazioni pulite.
 
+## 🤖 Local AI & NixitLLMs
+
+NixitOS features a deeply integrated local AI workflow via the `nixitos-llm` wrapper, orchestrating `llama.cpp` Podman containers.
+
+The engine seamlessly detects your hardware context:
+- **iGPU Mode:** Defaults to Intel Arc (SYCL) for battery-efficient inference.
+- **eGPU Mode:** If the Thunderbolt NVIDIA eGPU is plugged in and authorized, `nixitos-llm` dynamically reconfigures the stack to use the CUDA container and offload to the RTX 3060.
+
+### Common AI Commands
+- `nixitos-llm up` / `nixitos-llm down` - Start/Stop the inference server.
+- `nixitos-llm download <hf_repo> <filename>` - Safely fetch GGUF weights via a stateless, ephemeral container.
+- `nixitos-llm bench-all` - Run the evaluation suite (requires `MODEL=<router-section>`).
+
 ## 📖 Documentazione
 
 Per i dettagli tecnici, i vincoli architetturali completi, la pipeline GitOps e le istruzioni esclusive per gli agenti IA, consulta il file **[AGENTS.md](AGENTS.md)**. Costituisce la vera "Source of Truth" tecnica del progetto NixitOS.
