@@ -1,0 +1,17 @@
+# OCI image for Kevin's local GGUF engine.
+# Base image is upstream llama.cpp server compiled for Intel SYCL.
+FROM ghcr.io/ggml-org/llama.cpp:server-intel
+
+LABEL org.opencontainers.image.title="nixit-gguf-engine"       org.opencontainers.image.description="Intel Arc/SYCL llama.cpp router image for NixitOS local GGUF inference"       org.opencontainers.image.vendor="NixitOS"       org.opencontainers.image.source="NixitOS build_files/usr/share/nixit-gguf-engine"
+
+# Keep runtime minimal: this image is the inference server. Host-side scripts drive
+# Podman benchmarks and model exploration so the container can stay close to upstream.
+COPY config/models.config /config/models.config
+COPY docs/README.md /opt/nixit-gguf-engine/README.md
+
+ENV ONEAPI_DEVICE_SELECTOR=level_zero:0     GGML_SYCL_ENABLE_LEVEL_ZERO=1     UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS=1     ZES_ENABLE_SYSMAN=1
+
+EXPOSE 8080
+
+# Router mode: the request JSON "model" field selects a section in /config/models.config.
+CMD ["--host", "0.0.0.0", "--port", "8080", "--timeout", "1200", "--models-preset", "/config/models.config"]

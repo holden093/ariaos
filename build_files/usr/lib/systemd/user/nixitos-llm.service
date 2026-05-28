@@ -1,0 +1,14 @@
+[Unit]
+Description=NixitOS GGUF Engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nixitos-llm up
+ExecStop=/usr/bin/nixitos-llm down
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=default.target

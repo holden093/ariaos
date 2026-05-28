@@ -11,7 +11,7 @@ FROM ghcr.io/blue-build/base-images/fedora-silverblue-nvidia:44
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     rsync -a /ctx/ / && \
-    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/nixitos-home-backup /usr/bin/nixitos-home-restore /usr/bin/nixitos-daw-launcher /usr/bin/nixitos-llm && \
+    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/nixitos-home-backup /usr/bin/nixitos-home-restore /usr/bin/nixitos-daw-launcher /usr/bin/nixitos-llm /usr/bin/nixit-chat && \
     chmod 0440 /etc/sudoers.d/egpu /etc/sudoers.d/tuned
 
 # ==========================================
@@ -99,6 +99,7 @@ RUN --mount=type=cache,dst=/var/cache \
     obs-studio \
     obs-studio-plugin-x264 \
     podman-compose \
+    python3-pip \
     ripgrep \
     distrobox \
     ckan \
@@ -128,6 +129,14 @@ RUN --mount=type=cache,dst=/var/cache \
     # Rimuoviamo kargs di default di bluebuild che forzano il caricamento dei driver
     rm -f /usr/lib/bootc/kargs.d/bluebuild-kargs.toml && \
     echo "NixitOS: NVIDIA is now on-demand only."
+
+# ==========================================
+# 2b. CHATBOT LOCALE (nixit-chat) — venv
+# ==========================================
+
+RUN python3 -m venv --system-site-packages /usr/share/nixit-chat/venv && \
+    /usr/share/nixit-chat/venv/bin/pip install ddgs && \
+    rm -rf /usr/share/nixit-chat/venv/.cache
 
 # ==========================================
 # 3. BRANDING & IDENTITÀ

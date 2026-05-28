@@ -1,31 +1,61 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-LLM_DIR="${HOME}/GIT/NixitLLMs"
+COMMAND="${1:-}"
+LLAMA_PORT="${LLAMA_PORT:-8080}"
+export LLAMA_PORT
+MODEL_DIR="${MODEL_DIR:-/var/llms/ggufs}"
+export MODEL_DIR
 
-if [ ! -d "$LLM_DIR" ]; then
-    echo "❌ Errore: Directory $LLM_DIR non trovata."
+find_engine_dir() {
+    if [ -n "${NIXIT_ENGINE_DIR:-}" ]; then
+        printf '%s\n' "$NIXIT_ENGINE_DIR"
+        return
+    fi
+    if [ -f /usr/share/nixit-gguf-engine/compose.yaml ]; then
+        printf '%s\n' /usr/share/nixit-gguf-engine
+        return
+    fi
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local repo_engine
+    repo_engine="$(cd "$script_dir/.." && pwd)/share/nixit-gguf-engine"
+    if [ -f "$repo_engine/compose.yaml" ]; then
+        printf '%s\n' "$repo_engine"
+        return
+    fi
+    echo "❌ Motore GGUF non trovato: manca /usr/share/nixit-gguf-engine/compose.yaml" >&2
     exit 1
-fi
+}
 
-COMMAND=$1
-cd "$LLM_DIR"
+ENGINE_DIR="$(find_engine_dir)"
+COMPOSE="$ENGINE_DIR/compose.yaml"
+export NIXIT_ENGINE_DIR="$ENGINE_DIR"
+MODELS_CONFIG="${MODELS_CONFIG:-$ENGINE_DIR/config/models.config}"
+export MODELS_CONFIG
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/nixit-gguf-engine"
+OVERRIDE="$STATE_DIR/compose.override.yaml"
 
-# Imposta default per Podman compose e script
-export MODEL_DIR="${MODEL_DIR:-/home/kevin/LLMs/ggufs}"
-export LLAMA_PORT="${LLAMA_PORT:-8080}"
-export PORT="${LLAMA_PORT}"
+compose_cmd() {
+    if [ -f "$OVERRIDE" ]; then
+        podman compose -f "$COMPOSE" -f "$OVERRIDE" "$@"
+    else
+        podman compose -f "$COMPOSE" "$@"
+    fi
+}
 
-if [ "$COMMAND" = "up" ]; then
-    echo "==> Analisi hardware per NixitLLMs..."
-    if lsmod | grep -q "^nvidia_uvm"; then
-        echo "    🌟 eGPU NVIDIA rilevata. Configuro il container CUDA..."
-        cat <<'OVERRIDE' > compose.override.yaml
+case "$COMMAND" in
+    up)
+        mkdir -p "$STATE_DIR" "$MODEL_DIR"
+        echo "==> Analisi hardware per NixitOS GGUF engine..."
+        if lsmod | grep -q "^nvidia_uvm"; then
+            echo "    🌟 eGPU NVIDIA rilevata. Uso profilo CUDA."
+            cat > "$OVERRIDE" <<'OVERRIDE'
 services:
   gguf-engine:
     image: localhost/nixit-gguf-engine-cuda:latest
     build:
-      context: .
+      context: ${NIXIT_ENGINE_DIR:-/usr/share/nixit-gguf-engine}
       dockerfile: Containerfile.cuda
     environment:
       ONEAPI_DEVICE_SELECTOR: ""
@@ -37,84 +67,44 @@ services:
               count: all
               capabilities: [gpu]
 OVERRIDE
-        if [ ! -f Containerfile.cuda ]; then
-            cat <<'DOCKERFILE' > Containerfile.cuda
-FROM ghcr.io/ggml-org/llama.cpp:server-cuda
-COPY config/models.config /config/models.config
-COPY docs/README.md /opt/nixit-gguf-engine/README.md
-EXPOSE 8080
-CMD ["--host", "0.0.0.0", "--port", "8080", "--timeout", "1200", "--models-preset", "/config/models.config"]
-DOCKERFILE
+            compose_cmd up -d --build
+        else
+            echo "    🚀 eGPU non rilevata. Uso Intel Arc/SYCL."
+            rm -f "$OVERRIDE"
+            compose_cmd up -d --build
         fi
-        
-        echo "    Avvio con GPU NVIDIA..."
-        podman compose -f compose.yaml -f compose.override.yaml up -d --build
-    else
-        echo "    🚀 eGPU non rilevata. Uso Intel Arc (SYCL)..."
-        rm -f compose.override.yaml
-        podman compose -f compose.yaml up -d --build
-    fi
-    echo "✅ NixitLLMs in esecuzione (porta $LLAMA_PORT)."
-    
-elif [ "$COMMAND" = "down" ]; then
-    if [ -f compose.override.yaml ]; then
-        podman compose -f compose.yaml -f compose.override.yaml down
-    else
-        podman compose -f compose.yaml down
-    fi
-elif [ "$COMMAND" = "logs" ]; then
-    podman logs -f nixit-gguf-engine
-elif [ "$COMMAND" = "health" ]; then
-    curl -fsS "http://127.0.0.1:${LLAMA_PORT}/health"
-    echo -e "\n✅ Motore GGUF in ascolto."
-elif [ "$COMMAND" = "download" ]; then
-    REPO=$2
-    FILE=$3
-    if [ -z "$REPO" ] || [ -z "$FILE" ]; then
-        echo "Uso: nixitos-llm download <hf_repo> <filename>"
-        echo "Esempio: nixitos-llm download unsloth/gemma-4-E4B-it-GGUF *Q4_K_M.gguf"
+        echo "✅ Motore GGUF in esecuzione su http://127.0.0.1:${LLAMA_PORT}"
+        ;;
+    down)
+        compose_cmd down
+        ;;
+    logs)
+        podman logs -f nixit-gguf-engine
+        ;;
+    health)
+        curl -fsS "http://127.0.0.1:${LLAMA_PORT}/health"
+        echo -e "\n✅ Motore GGUF in ascolto."
+        ;;
+    models)
+        curl -fsS "http://127.0.0.1:${LLAMA_PORT}/v1/models"
+        echo
+        ;;
+    download)
+        REPO="${2:-}"
+        FILE="${3:-}"
+        if [ -z "$REPO" ] || [ -z "$FILE" ]; then
+            echo "Uso: nixitos-llm download <hf_repo> <filename>"
+            exit 1
+        fi
+        echo "==> Scaricamento di $FILE da $REPO a $MODEL_DIR..."
+        mkdir -p "$MODEL_DIR"
+        podman run --rm -it -v "${MODEL_DIR}:/models:Z" docker.io/python:3.11-slim bash -c "\
+            pip install -q huggingface_hub[cli] && \
+            huggingface-cli download '$REPO' '$FILE' --local-dir /models --local-dir-use-symlinks False"
+        echo "✅ Download completato in $MODEL_DIR"
+        ;;
+    *)
+        echo "Uso: nixitos-llm {up|down|logs|health|models|download}"
         exit 1
-    fi
-    echo "==> Scaricamento di $FILE da $REPO a $MODEL_DIR..."
-    mkdir -p "$MODEL_DIR"
-    
-    # Usiamo un container effimero con huggingface_hub per non sporcare il sistema immutabile
-    podman run --rm -it -v "${MODEL_DIR}:/models:Z" docker.io/python:3.11-slim bash -c "\
-        pip install -q huggingface_hub[cli] && \
-        huggingface-cli download '$REPO' '$FILE' --local-dir /models --local-dir-use-symlinks False"
-        
-    echo "✅ Download completato in $MODEL_DIR"
-    
-elif [[ "$COMMAND" == bench-* ]] || [[ "$COMMAND" == "explore" ]] || [[ "$COMMAND" == "fit" ]]; then
-    # Definiamo i comandi senza dipendere da 'make'
-    echo "==> Esecuzione $COMMAND..."
-    case "$COMMAND" in
-        "bench-perf")
-            python3 benchmarks/bench_01_performance.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            ;;
-        "bench-reason")
-            python3 benchmarks/bench_02_reasoning.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            ;;
-        "bench-needle")
-            python3 benchmarks/bench_03_needle.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            ;;
-        "bench-sys")
-            python3 benchmarks/bench_04_sysadmin.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            ;;
-        "bench-all")
-            python3 benchmarks/bench_01_performance.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            python3 benchmarks/bench_02_reasoning.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            python3 benchmarks/bench_03_needle.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            python3 benchmarks/bench_04_sysadmin.py --base-url http://127.0.0.1:${PORT} --model "${MODEL:?set MODEL=<router-section>}"
-            ;;
-        "explore")
-            python3 scripts/explore_hf_gguf.py "${QUERY:?set QUERY='model search'}"
-            ;;
-        "fit")
-            python3 scripts/estimate_fit.py "${GGUF:?set GGUF=/path/model.gguf}" --ctx "${CTX:-131072}" --budget-gib "${BUDGET_GIB:-20}"
-            ;;
-    esac
-else
-    echo "Uso: nixitos-llm {up|down|logs|health|download|bench-perf|bench-reason|bench-needle|bench-sys|bench-all|explore|fit}"
-    exit 1
-fi
+        ;;
+esac

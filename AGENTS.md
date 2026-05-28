@@ -61,9 +61,85 @@ NixitOS implements a two-tier backup architecture:
 - **Dynamic DAW Tuning:** When launching a DAW (e.g., Reaper), users should use the `nixitos-daw-launcher` wrapper script. This script dynamically switches the system to the `latency-performance` tuned profile via `sudo` (allowed passwordless via `/etc/sudoers.d/tuned`) for the duration of the session, and restores `balanced-battery` upon exit.
 - **Priority Management:** `realtime-setup` is installed. Users MUST be added to the `realtime` and `audio` groups to take advantage of PAM `limits.d` capabilities.
 
-## 10. Local LLM Architecture (NixitLLMs Integration)
+## 10. Local LLM Architecture (NixitOS GGUF Engine)
 - **Dynamic Hardware Switching:** The system includes a unified LLM wrapper script (`nixitos-llm`) located in `build_files/usr/bin/nixitos-llm`. This script orchestrates the local `llama.cpp` container and handles hardware disparities on the fly.
   - If the `nvidia_uvm` kernel module is loaded (indicating the eGPU is active), the script dynamically creates a `compose.override.yaml` and a `Containerfile.cuda` to deploy the workload natively to the CUDA container, reserving all GPUs.
   - If the module is missing, it falls back to the embedded Intel Arc iGPU via SYCL.
 - **Stateless Operations:** To keep the host OS immutable and free of dependency sprawl (like Python/pip packages in the host root), the `nixitos-llm download` command fetches GGUF models directly from the Hugging Face Hub by spinning up an ephemeral, disposable `python:3.11-slim` Podman container.
+- **Engine Definition:** The GGUF engine compose, router config, and Containerfiles are maintained in this repo under `build_files/usr/share/nixit-gguf-engine/` and installed to `/usr/share/nixit-gguf-engine/`. Runtime state only belongs under `/var` or user state directories; the engine must not depend on ad-hoc directories in the user's home.
 - **Model Storage:** All downloaded models and configs must reside in `/var/llms` (symlinked to `~/LLMs/ggufs`). This guarantees they survive OS image updates and avoid bloating standard `/var/home` backups.
+
+## 11. Local Terminal Chatbot (nixit-chat)
+
+### Purpose
+`nixit-chat` is a terminal-based AI chatbot integrated into the NixitOS base image. It connects via SSE streaming to the local llama.cpp inference container (`nixit-gguf-engine` on `http://127.0.0.1:8080/v1`) and provides a conversational REPL with OpenAI-compatible function calling.
+
+### Location
+`build_files/usr/bin/nixit-chat` is the single canonical command and the only chatbot entrypoint maintained in this repository. Do not add compatibility aliases or duplicate wrapper commands unless the user explicitly requests them.
+
+### Runtime Dependencies
+- **System venv:** `/usr/share/nixit-chat/venv` (created at build time in the Containerfile with `python3 -m venv --system-site-packages`, inheriting system `requests` and `psutil`). The only pip dependency installed in this venv is `ddgs` (DuckDuckGo search).
+- **Containerfile addition:** `python3-pip` RPM, plus a dedicated RUN step that creates the venv and runs `pip install ddgs`.
+- **Python imports used:** `requests`, `json`, `datetime`, `os`, `sys`, `signal`, `textwrap`, `shutil`, `subprocess`, `random`, `re`, `pathlib`, `psutil` (lazy-imported in `system_info()`), `ddgs` (DuckDuckGo, try/except fallback to `duckduckgo_search`).
+
+### Environment Variables (no hardcoded values)
+All user/host-specific values are resolved dynamically or via environment variables:
+| Variable | Default | Purpose |
+|---|---|---|
+| `LLAMA_API` | `http://127.0.0.1:8080/v1` | llama.cpp OpenAI-compatible endpoint |
+| `NIXIT_CHAT_MODEL` | auto-detected from `/v1/models` (loaded `32k` profiles are preferred, then other loaded models), fallback `qwen3-4b-instruct-2507-ud-q6xl-32k` | Model to use |
+| `NIXIT_CHAT_COMPOSE` | `/usr/share/nixit-gguf-engine/compose.yaml` (with repo fallback during development) | Compose file for auto-starting the engine |
+| `NIXIT_WORK_DIR` | `os.cwd()` | Write-allowed directory for `write_file()` |
+
+**Hardcoding rule:** NEVER add user-specific data (hostname, CPU model, RAM size, hardcoded paths). Always use `os.uname().nodename`, `psutil.cpu_count()`, `psutil.virtual_memory().total`, `os.getenv(...)` with sensible defaults, or `Path.home()`.
+
+### Architecture
+
+#### Streaming Engine
+`call_llm_stream(messages, tools, max_tokens=2048)` sends `stream: true` to the API and yields typed event dicts:
+- `{"type": "reasoning", "text": "..."}` — Gemma4 thinking tokens (shown in gray, natural terminal wrapping)
+- `{"type": "content", "text": "..."}` — response tokens (streamed to stdout)
+- `{"type": "done", "reason": "stop"|"tool_calls"|"length", "usage": {...}, "timings": {...}, "tool_calls": [...]}` — final event with stats
+
+SSE parsing handles `data:` lines, `[DONE]` marker, and JSON decode errors gracefully. Tool calls are accumulated across streaming chunks (indexed by `tc["index"]`).
+
+#### Tool Calling Loop
+Each user message enters a `while tool_rounds < 5 and not done_final` loop:
+1. Stream the API response
+2. If `done` with `reason: "tool_calls"` → execute tool(s), append results to messages, continue loop
+3. If `done` with `reason: "stop"` → display content, show stats, set `done_final = True`
+4. Error handling: ConnectionError, HTTP errors, timeout
+
+#### Tools (5 total)
+All defined in the `TOOLS` list (OpenAI function-calling schema) and `TOOL_IMPL` dict. Model sees them in every request.
+
+1. **`web_search(query)`** — DuckDuckGo via `ddgs` library. Max 5 results, snippet truncated at 200 chars.
+2. **`system_info(category)`** — Uses `psutil` for CPU %, RAM, swap, disk usage, processes (top 10 by RAM). GPU detection via `lsmod | grep nvidia_uvm`.
+3. **`read_file(path)`** — Resolves `~`, validates existence/is_file. Limits: 1 MB size, 10k chars read. UTF-8 with error replacement.
+4. **`write_file(path, content)`** — Ensures `resolve()`d path starts with `NIXIT_WORK_DIR.resolve()`. Creates parent dirs. Blocks path traversal (`../`, `~/`, `/tmp/`).
+5. **`run(command)`** — Whitelisted read-only shell commands. Blocks pipes, redirects, sudo, destructive operations. 15s timeout, output capped at 5k chars.
+
+#### Reasoning Display
+When `show_reasoning` is True (toggled via `/think`), thinking tokens print in gray with natural terminal wrapping. A `🧠` prefix marks the thinking. When content tokens arrive, the thinking display naturally flows into the response with a visual gap. No `\r` tricks — the terminal handles wrapping.
+
+#### Interaction Features
+- `/think` — toggle thinking visibility
+- `/model` — list available models from API
+- `/new` — clear conversation history
+- Multiline input: `"""..."""` syntax for pasting blocks
+- Auto-start: if engine unreachable, runs `podman compose up -d` with configurable compose path
+- History persistence: JSON file at `~/.local/share/nixit-chat-history.json` (last 100 messages)
+- Exit messages: randomized from `EXIT_MSGS` list
+
+#### Model Selection and Local Memory Budget
+`detect_model()` must prefer loaded `32k` profiles over `128k` profiles. The laptop GGUF engine is intended to stay within an approximate 10 GiB shared GPU-memory budget; long-context work belongs on `api.ai.nixit.it` or another remote server. Do not expose or auto-select 128k laptop profiles unless the user explicitly accepts the memory and latency cost.
+
+#### System Prompt
+Dynamically built by `get_system_prompt()` — injects `os.uname().nodename`, kernel version, CPU count (`psutil.cpu_count()`), RAM (`psutil.virtual_memory().total`). Personality: "Aria", Italian sysadmin, friendly/competent. Rules: proactive (try common paths first), never conservative (always search fresh), offer to save structured output.
+
+### Testing Mandate
+Any modification must pass:
+1. Syntax check (`py_compile`)
+2. Non-interactive smoke test against running API (verify tool calling, web search, system_info)
+3. No hardcoded user/host-specific values (grep for hostname, CPU model, RAM size, fixed paths)
+4. The Containerfile must build the ctx stage without errors

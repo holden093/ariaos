@@ -83,7 +83,7 @@ Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 * **`nixitos-home-backup`**: Utility TUI legacy per il Disaster Recovery "Bare-Metal". Esporta la `/var/home` in un file monolitico zstd sfruttando `btrfs send`. Da usare per backup integrali offline su USB prima di formattare.
 * **`nixitos-home-restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup monolitico zstd su installazioni pulite.
 
-## 🤖 AI Locale & NixitLLMs
+## 🤖 AI Locale & Motore GGUF NixitOS
 
 NixitOS include un workflow AI locale profondamente integrato tramite il wrapper `nixitos-llm`, che orchestra i container Podman di `llama.cpp`.
 
@@ -95,6 +95,18 @@ Il motore rileva dinamicamente il contesto hardware:
 - `nixitos-llm up` / `nixitos-llm down` - Avvia/Ferma il server di inferenza.
 - `nixitos-llm download <hf_repo> <filename>` - Scarica in sicurezza i pesi GGUF tramite un container stateless ed effimero (es. `nixitos-llm download unsloth/gemma-4-E4B-it-GGUF *Q8_K_XL.gguf`).
 - `nixitos-llm bench-all` - Esegue la suite di validazione (richiede `MODEL=<router-section>`).
+
+### 💬 Chatbot Locale (nixit-chat)
+
+`nixit-chat` è un chatbot interattivo da terminale che si connette al motore di inferenza locale. Supporta ricerca web e comandi di sistema.
+
+- **Avvio:** `nixit-chat`.
+- **Profilo locale:** il rilevamento automatico preferisce i profili `32k`, mantenendo il budget GPU condiviso entro circa 10 GiB. I contesti lunghi vanno eseguiti su `api.ai.nixit.it`.
+- **Ricerca web:** Il modello chiama automaticamente DuckDuckGo quando necessario. Forzabile con `/web <query>`.
+- **Stato sistema:** Il modello rileva automaticamente quando l'utente chiede informazioni sul sistema. Forzabile con `/sys [cpu|mem|disk|gpu|proc]`.
+- **Comandi:** `/help`, `/new`, `/exit`
+
+Dipende dal container `nixit-gguf-engine` in esecuzione su `127.0.0.1:8080`. La definizione del motore è centralizzata nel repo in `build_files/usr/share/nixit-gguf-engine/` e viene installata in `/usr/share/nixit-gguf-engine/`; non dipende da directory operative esterne nella home utente.
 
 ## 📖 Documentazione
 

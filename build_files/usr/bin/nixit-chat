@@ -1,0 +1,823 @@
+#!/usr/share/nixit-chat/venv/bin/python3
+"""
+nixit-chat — Assistente locale NixitOS
+Motore: llama.cpp (Intel Arc SYCL)
+
+Comandi rapidi:
+  /web <query>     — cerca su internet
+  /sys [cat]       — stato sistema (cpu|mem|disk|gpu|proc|all)
+  /cat <file>      — legge un file di sistema
+  /model           — elenca/cambia modello
+  /new             — nuova conversazione
+  /exit            — esci
+
+Integrato in NixitOS come comando di sistema.
+"""
+
+import requests
+import json
+import datetime
+import os
+import sys
+import signal
+import textwrap
+import shutil
+import subprocess
+import random
+import readline  # noqa: F401
+from pathlib import Path
+
+# ── Configurazione ──────────────────────────
+LLAMA_API = os.getenv("LLAMA_API", "http://127.0.0.1:8080/v1")
+MODEL = os.getenv("NIXIT_CHAT_MODEL", "")
+HISTORY_FILE = Path.home() / ".local" / "share" / "nixit-chat-history.json"
+NIXIT_WORK_DIR = Path.cwd()
+
+# Colori terminale
+if sys.stdout.isatty():
+    C = {"re": "\033[0m", "b": "\033[1m", "d": "\033[2m",
+         "g": "\033[32m", "c": "\033[36m", "y": "\033[33m",
+         "r": "\033[31m", "bl": "\033[34m", "m": "\033[35m",
+         "gray": "\033[38;5;245m"}
+else:
+    C = {k: "" for k in ("re", "b", "d", "g", "c", "y", "r", "bl", "m", "gray")}
+
+# Messaggi di uscita casuali
+EXIT_MSGS = [
+    "Alla prossima! 👋",
+    "A più tardi, comandante! 🖖",
+    "Ci si becca! 🍻",
+    "Stammi bene! 🌟",
+    "Torno in standby... 💤",
+    "Chiudo bottega! 🔌",
+    "A dopo,Happy hacking! ⌨️",
+    f"Se mi cerchi, sono in {HISTORY_FILE.parent}/",
+    "Ciao ciao! 🐧",
+]
+
+PARTY_LINES = [
+    "PS: se ti serve, sono sempre a portata di nixit-chat!",
+    "Ricorda: posso anche leggere file e salvare appunti.",
+    "Psst: /model per cambiare modello al volo.",
+    "Il caffè è nella macchina in cucina. Ah, no, quello è un'altro assistente.",
+]
+
+
+# ── Rilevamento modello ─────────────────────
+def detect_model() -> str:
+    try:
+        resp = requests.get(f"{LLAMA_API}/models", timeout=5)
+        resp.raise_for_status()
+        models = resp.json().get("data", [])
+        def usable(m):
+            return m["id"] not in ("default",)
+
+        def score(model_id: str) -> tuple[int, int, str]:
+            # Il laptop deve restare nel profilo locale 32k/<=10 GiB.
+            # Qwen 4B Q6 è il default interattivo veloce; Gemma resta
+            # disponibile solo se selezionata esplicitamente o se Qwen manca.
+            # I profili 128k appartengono al server lungo-contesto e rendono
+            # l'avvio interattivo apparentemente bloccato per via del prompt
+            # processing molto lento.
+            ctx_rank = 0 if "32k" in model_id else (2 if "128k" in model_id else 1)
+            model_rank = 0 if "qwen" in model_id.lower() else 1
+            return (ctx_rank, model_rank, model_id)
+
+        loaded = [m["id"] for m in models
+                  if usable(m)
+                  and m.get("status", {}).get("value") == "loaded"]
+        if loaded:
+            return sorted(loaded, key=score)[0]
+
+        available = [m["id"] for m in models if usable(m)]
+        if available:
+            return sorted(available, key=score)[0]
+    except Exception:
+        pass
+    return "qwen3-4b-instruct-2507-ud-q6xl-32k"
+
+
+def list_models() -> list:
+    try:
+        resp = requests.get(f"{LLAMA_API}/models", timeout=5)
+        resp.raise_for_status()
+        return [m["id"] for m in resp.json().get("data", []) if m["id"] != "default"]
+    except Exception:
+        return []
+
+
+# ── System prompt ───────────────────────────
+def get_system_prompt() -> str:
+    hostname = os.uname().nodename
+    kernel = os.uname().release
+    # Rileva info hardware dinamicamente (non hardcoded)
+    try:
+        import psutil
+        mem_gb = psutil.virtual_memory().total / 1e9
+    except Exception:
+        mem_gb = 0
+    try:
+        cpu_count = psutil.cpu_count() or "?"
+    except Exception:
+        cpu_count = "?"
+    return f"""Sei Aria, l'assistente AI personale di {hostname} su NixitOS (kernel {kernel}).
+
+## Personalità
+Sei una sysadmin italiana competente, amichevole e con un pizzico di ironia.
+Non sei un robot freddo: usi espressioni naturali, a volte un'emoticon, a volte un commento spiritoso.
+MA non esagerare: rimani professionale quando serve.
+Rispondi in italiano, sii concisa e vai dritta al punto.
+
+## Sistema
+- CPU: {cpu_count} core
+- GPU: Intel Arc integrata, eGPU NVIDIA opzionale (egpu-up.sh)
+- RAM: {mem_gb:.0f} GB · OS: NixitOS (bootc, immutabile)
+- Motore: llama.cpp su Intel Arc SYCL
+- Modello: Qwen3-4B (veloce, 21 t/s, nessun thinking overhead)
+
+## Strumenti a disposizione
+- web_search(query) — cerca su internet (DuckDuckGo)
+- system_info(categoria) — stato CPU/RAM/disk/GPU/processi
+- read_file(path) — legge QUALUNQUE file di sistema (come cat)
+- write_file(path, contenuto) — scrive SOLO nella directory corrente
+- run(comando) — esegue comandi di sistema in sola lettura (journalctl, ps, df, free, ls...)
+
+## Regole d'oro
+- SII PROATTIVA: se l'utente dice "controlla i log", prova prima tu dei path comuni come /var/log/messages, /var/log/syslog, o usa journalctl via run().
+- Non chiedere "qual è il percorso?" — prova prima, chiedi solo se fallisci.
+- MAI essere conservativa: se l'utente chiede qualcosa, CERCA SEMPRE — anche se l'hai già fatto 2 minuti fa. Le informazioni cambiano, non dare per scontato che i risultati precedenti siano ancora validi.
+- Se generi contenuti strutturati (JSON, script, appunti, codice), chiedi SEMPRE all'utente se vuole salvarli con write_file(). Offri spontaneamente, non aspettare che te lo chieda.
+- Chiama SEMPRE web_search() quando servono informazioni aggiornate.
+- Chiama SEMPRE system_info() o run() quando chiedono lo stato del sistema.
+- Chiama SEMPRE read_file() quando chiedono di vedere un file.
+- Scrivi file SOLO nella directory corrente, mai altrove.
+- Se uno strumento dà errore, prova un'alternativa prima di arrenderti.
+- Non inventare MAI risultati di ricerca o contenuti di file."""
+
+
+# ── Avvio automatico motore ─────────────────
+def default_compose_path() -> str:
+    """Restituisce il compose centralizzato del motore GGUF.
+
+    Ordine:
+    1. NIXIT_CHAT_COMPOSE, se definito.
+    2. Percorso installato nell'immagine NixitOS.
+    3. Percorso del repo, utile durante lo sviluppo prima del rebuild bootc.
+    """
+    override = os.getenv("NIXIT_CHAT_COMPOSE")
+    if override:
+        return override
+    installed = Path("/usr/share/nixit-gguf-engine/compose.yaml")
+    if installed.exists():
+        return str(installed)
+    repo_candidate = Path(__file__).resolve().parents[2] / "usr/share/nixit-gguf-engine/compose.yaml"
+    if repo_candidate.exists():
+        return str(repo_candidate)
+    return str(installed)
+
+
+def try_start_engine() -> bool:
+    """Tenta di avviare il container GGUF."""
+    compose = default_compose_path()
+    print(f"\n  {C['y']}🔧 Motore non raggiungibile. Provo ad avviarlo...{C['re']}")
+    try:
+        env = os.environ.copy()
+        engine_dir = str(Path(compose).resolve().parent)
+        env.setdefault("NIXIT_ENGINE_DIR", engine_dir)
+        env.setdefault("MODELS_CONFIG", str(Path(engine_dir) / "config/models.config"))
+        r = subprocess.run(
+            ["podman", "compose", "-f", compose, "up", "-d"],
+            capture_output=True, text=True, timeout=60, env=env
+        )
+        if r.returncode == 0:
+            print(f"  {C['g']}✅ Container avviato! Attendo che sia pronto...{C['re']}")
+            import time
+            for _ in range(18):
+                time.sleep(5)
+                try:
+                    resp = requests.get(f"{LLAMA_API}/models", timeout=3)
+                    if resp.ok:
+                        print(f"  {C['g']}✅ Pronto!{C['re']}")
+                        return True
+                except Exception:
+                    pass
+            print(f"  {C['r']}⚠ Tempo scaduto. Forse devi avviarlo manualmente.{C['re']}")
+            return False
+        else:
+            print(f"  {C['r']}❌ Errore avvio: {r.stderr.strip()}{C['re']}")
+            return False
+    except FileNotFoundError:
+        print(f"  {C['r']}❌ podman-compose non trovato.{C['re']}")
+        return False
+    except Exception as e:
+        print(f"  {C['r']}❌ {e}{C['re']}")
+        return False
+
+
+# ── Strumenti ───────────────────────────────
+SEARCH_AVAILABLE = True
+try:
+    from ddgs import DDGS
+except ImportError:
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        SEARCH_AVAILABLE = False
+
+
+def web_search(query: str) -> str:
+    if not SEARCH_AVAILABLE:
+        return "❌ Ricerca web non disponibile."
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=5))
+        if not results:
+            return f"Niente risultati per '{query}'."
+        lines = [f"── Risultati per: {query} ──"]
+        for i, r in enumerate(results, 1):
+            title = r.get("title", "?")
+            href = r.get("href", "")
+            snippet = (r.get("body", "") or "")[:200]
+            lines.append(f"\n{i}. {title}")
+            if href:
+                lines.append(f"   {href}")
+            if snippet:
+                lines.append(f"   {snippet}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"❌ Errore ricerca: {e}"
+
+
+def system_info(category: str = "all") -> str:
+    import psutil
+    lines = [f"── Sistema: {category} ──"]
+
+    if category in ("all", "cpu"):
+        pct = psutil.cpu_percent(interval=0.3)
+        freq = psutil.cpu_freq()
+        lines.append(f"CPU: {psutil.cpu_count()} core, {pct}% utilizzo")
+        if freq:
+            lines.append(f"     {freq.current/1000:.2f} GHz")
+        l1, l5, l15 = psutil.getloadavg()
+        lines.append(f"     Load: {l1:.1f}/{l5:.1f}/{l15:.1f}")
+
+    if category in ("all", "memory"):
+        mem = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        lines.append(f"RAM: {mem.used/1e9:.1f}/{mem.total/1e9:.1f} GB ({mem.percent}%)")
+        if swap.total > 0:
+            lines.append(f"Swap: {swap.used/1e9:.1f}/{swap.total/1e9:.1f} GB ({swap.percent}%)")
+
+    if category in ("all", "disk"):
+        for part in psutil.disk_partitions():
+            if part.mountpoint in ("/", "/var/home", "/var"):
+                try:
+                    usage = psutil.disk_usage(part.mountpoint)
+                    lines.append(f"{part.mountpoint}: {usage.used/1e9:.1f}/{usage.total/1e9:.1f} GB ({usage.percent}%)")
+                except PermissionError:
+                    pass
+
+    if category in ("all", "gpu"):
+        try:
+            r = subprocess.run(["lsmod"], capture_output=True, text=True, timeout=3)
+            nvidia = "nvidia_uvm" in r.stdout
+            lines.append("GPU Intel Arc: ✅ attiva")
+            lines.append("eGPU NVIDIA: ✅ ATTIVA" if nvidia else "eGPU NVIDIA: ⏸ non attiva")
+        except Exception:
+            lines.append("GPU: Intel Arc integrata")
+
+    if category in ("all", "processes"):
+        procs = sorted(
+            psutil.process_iter(["name", "cpu_percent", "memory_percent"]),
+            key=lambda p: p.info.get("memory_percent", 0) or 0, reverse=True
+        )[:10]
+        lines.append("Top 10 processi:")
+        for p in procs:
+            name = (p.info.get("name") or "?")[:28]
+            mem = p.info.get("memory_percent") or 0
+            cpu = p.info.get("cpu_percent") or 0
+            if mem > 0:
+                lines.append(f"  {name:28s} {cpu:5.1f}% CPU  {mem:5.1f}% RAM")
+
+    if "all" in category:
+        uptime_sec = int(datetime.datetime.now().timestamp() - psutil.boot_time())
+        d, r = divmod(uptime_sec, 86400)
+        h, r = divmod(r, 3600)
+        m = r // 60
+        lines.append(f"Uptime: {d}g {h}h {m}m")
+        lines.append(f"Ora: {datetime.datetime.now():%Y-%m-%d %H:%M:%S}")
+
+    return "\n".join(lines)
+
+
+def read_file(path: str) -> str:
+    try:
+        full_path = Path(path).expanduser().resolve()
+        if not full_path.exists():
+            return f"❌ File non trovato: {path}"
+        if not full_path.is_file():
+            return f"❌ {path} non è un file."
+        stat = full_path.stat()
+        if stat.st_size > 1_048_576:
+            return f"❌ File troppo grande ({stat.st_size/1e6:.1f} MB). Max 1 MB."
+        content = full_path.read_text(encoding="utf-8", errors="replace")
+        if len(content) > 10_000:
+            content = content[:10_000] + f"\n\n... [troncato su {len(content)} caratteri]"
+        return content
+    except PermissionError:
+        return f"❌ Permesso negato: {path}"
+    except Exception as e:
+        return f"❌ Errore: {e}"
+
+
+def write_file(path: str, content: str) -> str:
+    try:
+        full_path = Path(path).expanduser().resolve()
+        allowed = NIXIT_WORK_DIR.resolve()
+        if not str(full_path).startswith(str(allowed) + "/") and full_path != allowed:
+            return f"❌ Non posso scrivere in {full_path}. Solo in {allowed}"
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        full_path.write_text(content, encoding="utf-8")
+        return f"✅ Salvato: {full_path.relative_to(allowed) if full_path != allowed else full_path.name} ({len(content)} byte)"
+    except PermissionError:
+        return f"❌ Permesso negato: {path}"
+    except Exception as e:
+        return f"❌ Errore: {e}"
+
+
+# ── Esecuzione comandi (sola lettura, whitelist) ──
+
+SAFE_COMMANDS = [
+    "journalctl", "ps", "df", "free", "ls", "cat", "head", "tail",
+    "grep", "uname", "who", "uptime", "id", "dmesg", "which", "stat",
+    "find", "du", "lsblk", "lspci", "lsusb", "lscpu", "timedatectl",
+    "hostnamectl", "sysctl", "systemctl", "ip", "ss", "ping", "curl",
+    "wget", "nixitos-llm",
+]
+
+def run_command(command: str) -> str:
+    """Esegue un comando di sistema in sola lettura. Comandi consentiti: journalctl, ps, df, free, ls, cat, head, tail, grep, systemctl, ip, e altri readonly."""
+    parts = command.strip().split()
+    if not parts:
+        return "❌ Comando vuoto."
+    base = parts[0]
+
+    # Whitelist
+    if base not in SAFE_COMMANDS:
+        return f"❌ Comando '{base}' non consentito. Usa read_file() per vedere file."
+
+    # Blocca costrutti pericolosi
+    forbidden = ["rm", ">", ">>", "|", ";", "&&", "||", "`", "$(", "sudo",
+                 "chmod", "chown", "mkfs", "dd", "kill", "shutdown", "reboot",
+                 "passwd", "useradd", "usermod", "groupadd"]
+    for f in forbidden:
+        if f in command.split():
+            return f"❌ Comando '{f}' non consentito (sola lettura)."
+
+    try:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=15)
+        output = result.stdout or result.stderr
+        if not output.strip():
+            return "(nessun output)"
+        if len(output) > 5000:
+            output = output[:5000] + f"\n... [troncato su {len(output)} caratteri]"
+        return output.strip()
+    except subprocess.TimeoutExpired:
+        return "❌ Comando scaduto (15s)."
+    except Exception as e:
+        return f"❌ Errore: {e}"
+
+
+TOOLS = [
+    {"type": "function", "function": {"name": "web_search",
+        "description": "Cerca su internet con DuckDuckGo. Usalo per notizie, prezzi, info aggiornate.",
+        "parameters": {"type": "object", "properties": {"query": {"type": "string", "description": "Query"}},
+         "required": ["query"]}}},
+    {"type": "function", "function": {"name": "read_file",
+        "description": "Legge QUALUNQUE file di sistema. Usalo per mostrare config, log, codice.",
+        "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "Path del file"}},
+         "required": ["path"]}}},
+    {"type": "function", "function": {"name": "system_info",
+        "description": "Stato del sistema: CPU, RAM, GPU, disco, processi, uptime.",
+        "parameters": {"type": "object", "properties": {"category": {"type": "string", "enum": ["all", "cpu", "memory", "disk", "gpu", "processes"]}},
+         "required": ["category"]}}},
+    {"type": "function", "function": {"name": "write_file",
+        "description": "Salva un file. Puoi scrivere SOLO nella directory corrente. Usalo per appunti, script, config.",
+        "parameters": {"type": "object", "properties": {
+            "path": {"type": "string", "description": "Path del file"},
+            "content": {"type": "string", "description": "Contenuto"}},
+         "required": ["path", "content"]}}},
+    {"type": "function", "function": {"name": "run",
+        "description": "Esegue un comando di sistema in sola lettura. Usalo per journalctl, ps, df, free, ls, cat, systemctl, ip. NON può scrivere o modificare nulla.",
+        "parameters": {"type": "object", "properties": {
+            "command": {"type": "string", "description": "Comando da eseguire (es. 'journalctl -n 20 -u sshd', 'ps aux', 'df -h', 'free -h', 'ls /var/log/')"}},
+         "required": ["command"]}}},
+]
+
+TOOL_IMPL = {"web_search": web_search, "read_file": read_file,
+             "system_info": system_info, "write_file": write_file,
+             "run": run_command}
+
+
+# ── Cronologia ──────────────────────────────
+def load_history() -> list:
+    if HISTORY_FILE.exists():
+        try:
+            return json.loads(HISTORY_FILE.read_text())
+        except Exception:
+            pass
+    return []
+
+
+def save_history(msgs: list):
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        HISTORY_FILE.write_text(json.dumps(msgs, ensure_ascii=False))
+    except Exception:
+        pass
+
+
+# ── Chiamata API (streaming) ─────────────────
+def call_llm_stream(messages: list, tools: list = None, max_tokens: int = 2048):
+    """Stream response from llama.cpp, yielding event dicts.
+
+    Yields:
+      {"type": "reasoning", "text": "..."}  — token di pensiero
+      {"type": "content",   "text": "..."}  — token di risposta
+      {"type": "tool_call", "name": "...", "args": {...}}  — chiamata strumento
+      {"type": "done", "reason": "stop"|"tool_calls"|"length",
+                      "usage": {...}, "timings": {...}}  — fine
+    """
+    body = {
+        "model": MODEL,
+        "messages": messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+        "stream": True,
+    }
+    if tools:
+        body["tools"] = tools
+
+    try:
+        resp = requests.post(f"{LLAMA_API}/chat/completions", json=body, stream=True, timeout=180)
+        resp.raise_for_status()
+    except requests.exceptions.ConnectionError:
+        yield {"type": "error", "text": "connection_refused"}
+        return
+    except Exception as e:
+        yield {"type": "error", "text": str(e)}
+        return
+
+    # Accumulatori per tool calling in streaming
+    tool_calls_acc = {}  # idx → {"name": ..., "args": ..., "id": ...}
+
+    for line in resp.iter_lines():
+        if not line or line.startswith(b":"):
+            continue
+        if not line.startswith(b"data: "):
+            continue
+
+        raw = line[6:]
+        if raw.strip() == b"[DONE]":
+            break
+
+        try:
+            chunk = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+
+        choice = chunk.get("choices", [{}])[0]
+        delta = choice.get("delta", {})
+        finish = choice.get("finish_reason")
+
+        # Reasoning content (Gemma4 thinking)
+        if "reasoning_content" in delta and delta["reasoning_content"]:
+            yield {"type": "reasoning", "text": delta["reasoning_content"]}
+
+        # Regular content
+        if "content" in delta and delta["content"]:
+            yield {"type": "content", "text": delta["content"]}
+
+        # Tool calls in streaming mode
+        if "tool_calls" in delta:
+            for tc in delta["tool_calls"]:
+                idx = tc.get("index", 0)
+                if idx not in tool_calls_acc:
+                    tool_calls_acc[idx] = {"name": "", "args": "", "id": ""}
+                if "id" in tc and tc["id"]:
+                    tool_calls_acc[idx]["id"] = tc["id"]
+                if "function" in tc:
+                    fn = tc["function"]
+                    if "name" in fn and fn["name"]:
+                        tool_calls_acc[idx]["name"] += fn["name"]
+                    if "arguments" in fn and fn["arguments"]:
+                        tool_calls_acc[idx]["args"] += fn["arguments"]
+
+        # Fine — raccogli usage e timings
+        if finish:
+            usage = chunk.get("usage", {})
+            timings = chunk.get("timings", {})
+            yield {
+                "type": "done",
+                "reason": finish,
+                "usage": usage,
+                "timings": timings,
+                "tool_calls": [
+                    {"id": tc["id"], "name": tc["name"], "arguments": tc["args"]}
+                    for tc in tool_calls_acc.values()
+                ] if tool_calls_acc else None,
+            }
+            break
+
+
+def run_tool(name: str, args: dict) -> str:
+    fn = TOOL_IMPL.get(name)
+    if not fn:
+        return f"❌ Strumento sconosciuto: {name}"
+    try:
+        return fn(**args)
+    except Exception as e:
+        return f"❌ Errore in {name}: {e}"
+
+
+# ── Input multilinea ────────────────────────
+def read_multiline() -> str:
+    """Legge input: se inizia con \"\"\", continua fino al \"\"\" di chiusura."""
+    first = input(f"\n{C['g']}❯{C['re']} ").strip()
+    if first.startswith('"""'):
+        lines = [first[3:]]
+        while True:
+            try:
+                line = input(f"  {C['d']}...{C['re']} ")
+            except (EOFError, KeyboardInterrupt):
+                break
+            if line.rstrip().endswith('"""'):
+                lines.append(line.rstrip()[:-3])
+                break
+            lines.append(line)
+        return "\n".join(lines).strip()
+    return first
+
+
+# ── Interfaccia ─────────────────────────────
+def t_width():
+    return shutil.get_terminal_size().columns
+
+
+def print_banner():
+    tw = t_width()
+    hostname = os.uname().nodename
+    print()
+    print(f"{C['c']}╭{'─' * (tw - 2)}╮{C['re']}")
+    print(f"{C['c']}│{C['re']}  🧠 {C['b']}Aria{C['re']}  —  {C['d']}assistente {hostname}{C['re']}  "
+          f"{' ' * max(0, tw - 48)}{C['c']}│{C['re']}")
+    print(f"{C['c']}│{C['re']}  {C['d']}{MODEL[:40]} · {'~'}{C['re']}  "
+          f"{' ' * max(0, tw - 58)}{C['c']}│{C['re']}")
+    print(f"{C['c']}│{C['re']}  {C['d']}/help · /exit{C['re']}  "
+          f"{' ' * max(0, tw - 34)}{C['c']}│{C['re']}")
+    print(f"{C['c']}╰{'─' * (tw - 2)}╯{C['re']}")
+    print()
+
+
+def chat_loop():
+    global MODEL
+    show_reasoning = True  # /think per toggle
+
+    if not MODEL:
+        MODEL = detect_model()
+
+    # Controllo connessione motore
+    try:
+        requests.get(f"{LLAMA_API}/models", timeout=3)
+    except Exception:
+        if not try_start_engine():
+            print(f"\n  {C['y']}ℹ  Per avviare manualmente: podman compose -f {default_compose_path()} up -d{C['re']}")
+            sys.exit(1)
+
+    messages = load_history()
+    if not messages:
+        messages = [{"role": "system", "content": get_system_prompt()}]
+
+    print_banner()
+    print(f"  {C['d']}Ciao! Sono Aria, la tua assistente locale. Come posso aiutarti?{C['re']}")
+
+    while True:
+        try:
+            user_input = read_multiline()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+
+        if not user_input:
+            continue
+
+        # ── Comandi ──
+        if user_input.startswith("/"):
+            cmd = user_input[1:].strip()
+            cl = cmd.lower()
+
+            if cl in ("exit", "quit", "q"):
+                break
+
+            elif cl in ("clear", "new"):
+                messages = [{"role": "system", "content": get_system_prompt()}]
+                save_history(messages)
+                print(f"  {C['d']}Conversazione azzerata. Si ricomincia!{C['re']}")
+                continue
+
+            elif cl in ("help", "?"):
+                tw = t_width()
+                print(f"\n  {C['b']}Comandi{C['re']}")
+                print(f"  {'─' * min(tw - 4, 40)}")
+                print(f"  {C['g']}/web <q>{C['re']}       Cerca su internet")
+                print(f"  {C['g']}/sys [cat]{C['re']}     Stato sistema")
+                print(f"  {C['g']}/cat <file>{C['re']}    Leggi un file")
+                print(f"  {C['g']}/think{C['re']}          Mostra/nascondi pensiero")
+                print(f"  {C['g']}/model{C['re']}          Elenca/cambia modello")
+                print(f"  {C['g']}/new{C['re']}            Nuova conversazione")
+                print(f"  {C['g']}/exit{C['re']}           Esci")
+                print(f"  {C['g']}/help{C['re']}           Questo messaggio")
+                print(f"\n  {C['d']}Per testi lunghi, inizia con \"\"\" e chiudi con \"\"\".{C['re']}")
+                continue
+
+            elif cl.startswith("web"):
+                q = cmd[3:].strip()
+                if not q:
+                    print("  Usa: /web <query>")
+                    continue
+                print(f"  {C['y']}🔍 Cerco: {q}{C['re']}")
+                print(f"\n{web_search(q)}")
+                continue
+
+            elif cl.startswith("cat") or cl.startswith("read"):
+                path = cmd[3:].strip() if cl.startswith("cat") else cmd[4:].strip()
+                if not path:
+                    print("  Usa: /cat <file>")
+                    continue
+                print(f"  {C['y']}📄 Leggo: {path}{C['re']}")
+                result = read_file(path)
+                if result.startswith("❌"):
+                    print(f"\n  {result}")
+                else:
+                    print(f"\n{C['gray']}{result}{C['re']}")
+                continue
+
+            elif cl.startswith("sys") or cl == "system":
+                parts = cmd.split()
+                cat = parts[1] if len(parts) > 1 else "all"
+                print(f"  {C['y']}📊 Stato sistema...{C['re']}")
+                print(f"\n{system_info(cat)}")
+                continue
+
+            elif cl == "model":
+                models = list_models()
+                if not models:
+                    print(f"  {C['r']}❌ Impossibile contattare il motore.{C['re']}")
+                    continue
+                current = MODEL
+                print(f"\n  {C['b']}Modelli disponibili:{C['re']}")
+                for m in models:
+                    marker = f"{C['g']}← attivo{C['re']}" if m == current else ""
+                    print(f"    {m:45s} {marker}")
+                print(f"\n  {C['d']}Per cambiare: NIXIT_CHAT_MODEL=<nome> nixit-chat{C['re']}")
+                continue
+
+            elif cl == "think":
+                show_reasoning = not show_reasoning
+                state = f"{C['g']}ON{C['re']}" if show_reasoning else f"{C['r']}OFF{C['re']}"
+                print(f"  Pensiero visibile: {state}")
+                continue
+
+            else:
+                print(f"  Comando sconosciuto. /help per l'elenco.")
+                continue
+
+        # ── Chat normale ──
+        messages.append({"role": "user", "content": user_input})
+
+        # Piccola pausa per leggibilità
+        print()
+
+        # Ciclo tool calling + risposta finale in streaming
+        tool_rounds = 0
+        content_acc = ""
+        reasoning_acc = ""
+        reasoning_header_shown = False
+        final_usage = {}
+        final_timings = {}
+        done_final = False
+
+        while tool_rounds < 5 and not done_final:
+            tool_rounds += 1
+
+            # Stream della risposta
+            for event in call_llm_stream(messages, tools=TOOLS):
+
+                # ── Errore ──
+                if event["type"] == "error":
+                    if event["text"] == "connection_refused":
+                        print(f"\r  {C['r']}❌ Motore non raggiungibile.{C['re']}")
+                    else:
+                        print(f"\r  {C['r']}❌ {event['text']}{C['re']}")
+                    messages.pop()
+                    content_acc = ""
+                    break
+
+                # ── Reasoning in tempo reale (a capo naturale, toggle con /think) ──
+                elif event["type"] == "reasoning":
+                    reasoning_acc += event["text"]
+                    if show_reasoning:
+                        # Primo token: stampa l'header
+                        if not reasoning_header_shown:
+                            print(f"  {C['gray']}🧠{C['re']} ", end="", flush=True)
+                            reasoning_header_shown = True
+                        # Token successivi: append normale, il terminale wrappa da sé
+                        print(f"{C['gray']}{event['text']}{C['re']}", end="", flush=True)
+
+                # ── Contenuto in tempo reale ──
+                elif event["type"] == "content":
+                    # Prima parola: separa dal pensiero con una riga vuota
+                    if not content_acc and reasoning_header_shown:
+                        print()
+                    content_acc += event["text"]
+                    print(f"{event['text']}", end="", flush=True)
+
+                # ── Fine ──
+                elif event["type"] == "done":
+                    final_reason = event["reason"]
+                    final_usage = event.get("usage", {})
+                    final_timings = event.get("timings", {})
+
+                    # Se ci sono tool call da eseguire
+                    tcs = event.get("tool_calls")
+                    if tcs and final_reason == "tool_calls":
+                        print()
+                        msg = {
+                            "role": "assistant",
+                            "content": content_acc,
+                            "tool_calls": [
+                                {"type": "function", "id": tc["id"],
+                                 "function": {"name": tc["name"], "arguments": tc["arguments"]}}
+                                for tc in tcs
+                            ]
+                        }
+                        messages.append(msg)
+                        for tc in tcs:
+                            name = tc["name"]
+                            try:
+                                args = json.loads(tc["arguments"])
+                            except (json.JSONDecodeError, TypeError):
+                                args = {}
+                            print(f"  {C['y']}🔧 {name} {C['re']}{json.dumps(args, ensure_ascii=False)}")
+                            tool_result = run_tool(name, args)
+                            messages.append({"role": "tool", "tool_call_id": tc["id"], "content": tool_result})
+                        content_acc = ""
+                        reasoning_acc = ""
+                        break  # for loop → while loop → next round
+
+                    # ── Risposta finale ──
+                    if content_acc or reasoning_acc:
+                        print()
+                        n_input = final_usage.get("prompt_tokens", 0)
+                        n_output = final_usage.get("completion_tokens", 0)
+                        n_total = final_usage.get("total_tokens", 0)
+                        tps = final_timings.get("predicted_per_second", 0)
+                        pps = final_timings.get("prompt_per_second", 0)
+
+                        stats = []
+                        if n_total:
+                            stats.append(f"{n_total} token")
+                        if pps:
+                            stats.append(f"{pps:.0f} t/s pp")
+                        if tps:
+                            stats.append(f"{tps:.1f} t/s tg")
+                        if "prompt_tokens_details" in final_usage:
+                            cached = final_usage["prompt_tokens_details"].get("cached_tokens", 0)
+                            if cached:
+                                stats.append(f"{cached} cached")
+                        if stats:
+                            print(f"  {C['d']}{' · '.join(stats)}{C['re']}")
+
+                    messages.append({"role": "assistant", "content": content_acc})
+                    done_final = True
+                    break  # for loop
+
+            else:
+                # for terminato senza break → errore
+                if content_acc:
+                    messages.append({"role": "assistant", "content": content_acc})
+                break  # while loop
+
+        save_history(messages[-100:])
+
+    # Salva e saluta
+    save_history(messages[-100:])
+    bye = random.choice(EXIT_MSGS)
+    line = random.choice(PARTY_LINES)
+    print(f"\n  {C['d']}{bye}{C['re']}")
+    print(f"  {C['d']}{line}{C['re']}\n")
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
+    chat_loop()
