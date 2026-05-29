@@ -62,10 +62,7 @@ NixitOS implements a two-tier backup architecture:
 - **Priority Management:** `realtime-setup` is installed. Users MUST be added to the `realtime` and `audio` groups to take advantage of PAM `limits.d` capabilities.
 
 ## 10. Local LLM Architecture (NixitOS GGUF Engine)
-- **Dynamic Hardware Switching:** The system includes a unified LLM wrapper script (`nixitos-llm`) located in `build_files/usr/bin/nixitos-llm`. This script orchestrates the local `llama.cpp` container and handles hardware disparities on the fly.
-  - If the `nvidia_uvm` kernel module is loaded (indicating the eGPU is active), the script dynamically creates a `compose.override.yaml` and a `Containerfile.cuda` to deploy the workload natively to the CUDA container, reserving all GPUs.
-  - If the module is missing, it falls back to the embedded Intel Arc iGPU via SYCL.
-- **Stateless Operations:** To keep the host OS immutable and free of dependency sprawl (like Python/pip packages in the host root), the `nixitos-llm download` command fetches GGUF models directly from the Hugging Face Hub by spinning up an ephemeral, disposable `python:3.11-slim` Podman container.
+- **Engine Management:** The local `llama.cpp` container is managed directly via `podman compose` using the compose definition at `/usr/share/nixit-gguf-engine/compose.yaml`. Use `podman compose -f /usr/share/nixit-gguf-engine/compose.yaml up -d` to start the engine.
 - **Engine Definition:** The GGUF engine compose, router config, and Containerfiles are maintained in this repo under `build_files/usr/share/nixit-gguf-engine/` and installed to `/usr/share/nixit-gguf-engine/`. Runtime state only belongs under `/var` or user state directories; the engine must not depend on ad-hoc directories in the user's home.
 - **Model Storage:** All downloaded models and configs must reside in `/var/llms` (symlinked to `~/LLMs/ggufs`). This guarantees they survive OS image updates and avoid bloating standard `/var/home` backups.
 

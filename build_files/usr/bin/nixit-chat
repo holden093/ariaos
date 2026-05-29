@@ -20,12 +20,14 @@ import datetime
 import os
 import sys
 import signal
-import textwrap
 import shutil
 import subprocess
 import random
+import time
 import readline  # noqa: F401
 from pathlib import Path
+
+import psutil
 
 # ── Configurazione ──────────────────────────
 LLAMA_API = os.getenv("LLAMA_API", "http://127.0.0.1:8080/v1")
@@ -81,6 +83,8 @@ def detect_model() -> str:
             # processing molto lento.
             ctx_rank = 0 if "32k" in model_id else (2 if "128k" in model_id else 1)
             model_rank = 0 if "qwen" in model_id.lower() else 1
+            # Il model_id come terzo elemento risolve i pareggi in modo
+            # deterministico (alfabetico) tra modelli di pari rango.
             return (ctx_rank, model_rank, model_id)
 
         loaded = [m["id"] for m in models
@@ -112,7 +116,6 @@ def get_system_prompt() -> str:
     kernel = os.uname().release
     # Rileva info hardware dinamicamente (non hardcoded)
     try:
-        import psutil
         mem_gb = psutil.virtual_memory().total / 1e9
     except Exception:
         mem_gb = 0
@@ -191,7 +194,6 @@ def try_start_engine() -> bool:
         )
         if r.returncode == 0:
             print(f"  {C['g']}✅ Container avviato! Attendo che sia pronto...{C['re']}")
-            import time
             for _ in range(18):
                 time.sleep(5)
                 try:
@@ -249,7 +251,6 @@ def web_search(query: str) -> str:
 
 
 def system_info(category: str = "all") -> str:
-    import psutil
     lines = [f"── Sistema: {category} ──"]
 
     if category in ("all", "cpu"):
@@ -300,12 +301,13 @@ def system_info(category: str = "all") -> str:
                 lines.append(f"  {name:28s} {cpu:5.1f}% CPU  {mem:5.1f}% RAM")
 
     if "all" in category:
-        uptime_sec = int(datetime.datetime.now().timestamp() - psutil.boot_time())
+        now = datetime.datetime.now()
+        uptime_sec = int(now.timestamp() - psutil.boot_time())
         d, r = divmod(uptime_sec, 86400)
         h, r = divmod(r, 3600)
         m = r // 60
         lines.append(f"Uptime: {d}g {h}h {m}m")
-        lines.append(f"Ora: {datetime.datetime.now():%Y-%m-%d %H:%M:%S}")
+        lines.append(f"Ora: {now:%Y-%m-%d %H:%M:%S}")
 
     return "\n".join(lines)
 
@@ -320,7 +322,10 @@ def read_file(path: str) -> str:
         stat = full_path.stat()
         if stat.st_size > 1_048_576:
             return f"❌ File troppo grande ({stat.st_size/1e6:.1f} MB). Max 1 MB."
-        content = full_path.read_text(encoding="utf-8", errors="replace")
+        raw = full_path.read_bytes()
+        if b"\x00" in raw[:4096]:
+            return "❌ File binario, non posso mostrarlo."
+        content = raw.decode("utf-8", errors="replace")
         if len(content) > 10_000:
             content = content[:10_000] + f"\n\n... [troncato su {len(content)} caratteri]"
         return content
@@ -352,7 +357,7 @@ SAFE_COMMANDS = [
     "grep", "uname", "who", "uptime", "id", "dmesg", "which", "stat",
     "find", "du", "lsblk", "lspci", "lsusb", "lscpu", "timedatectl",
     "hostnamectl", "sysctl", "systemctl", "ip", "ss", "ping", "curl",
-    "wget", "nixitos-llm",
+    "wget",
 ]
 
 def run_command(command: str) -> str:
@@ -367,12 +372,12 @@ def run_command(command: str) -> str:
         return f"❌ Comando '{base}' non consentito. Usa read_file() per vedere file."
 
     # Blocca costrutti pericolosi
-    forbidden = ["rm", ">", ">>", "|", ";", "&&", "||", "`", "$(", "sudo",
+    forbidden = {"rm", ">", ">>", "|", ";", "&&", "||", "`", "$(", "sudo",
                  "chmod", "chown", "mkfs", "dd", "kill", "shutdown", "reboot",
-                 "passwd", "useradd", "usermod", "groupadd"]
-    for f in forbidden:
-        if f in command.split():
-            return f"❌ Comando '{f}' non consentito (sola lettura)."
+                 "passwd", "useradd", "usermod", "groupadd"}
+    bad = set(parts) & forbidden
+    if bad:
+        return f"❌ '{bad.pop()}' non consentito (sola lettura)."
 
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=15)
@@ -803,15 +808,16 @@ def chat_loop():
                     break  # for loop
 
             else:
-                # for terminato senza break → errore
+                # Il for loop è terminato senza break:
+                # lo stream non ha emesso né un evento 'done' né un errore.
+                # Salviamo il contenuto parziale e usciamo.
                 if content_acc:
                     messages.append({"role": "assistant", "content": content_acc})
                 break  # while loop
 
         save_history(messages[-100:])
 
-    # Salva e saluta
-    save_history(messages[-100:])
+    # Saluta
     bye = random.choice(EXIT_MSGS)
     line = random.choice(PARTY_LINES)
     print(f"\n  {C['d']}{bye}{C['re']}")

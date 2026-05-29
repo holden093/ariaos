@@ -13,10 +13,10 @@ Motore locale GGUF per NixitOS basato su `llama.cpp` in modalità server OpenAI-
 ## Uso
 
 ```bash
-nixitos-llm up
-nixitos-llm health
-nixitos-llm logs
-nixitos-llm down
+podman compose -f /usr/share/nixit-gguf-engine/compose.yaml up -d
+curl -fsS http://127.0.0.1:8080/health
+podman compose -f /usr/share/nixit-gguf-engine/compose.yaml logs -f
+podman compose -f /usr/share/nixit-gguf-engine/compose.yaml down
 ```
 
 `nixit-chat` usa lo stesso motore. Se l'API locale non è raggiungibile, prova ad avviare automaticamente il compose centralizzato.

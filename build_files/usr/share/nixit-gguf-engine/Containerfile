@@ -4,8 +4,8 @@ FROM ghcr.io/ggml-org/llama.cpp:server-intel
 
 LABEL org.opencontainers.image.title="nixit-gguf-engine"       org.opencontainers.image.description="Intel Arc/SYCL llama.cpp router image for NixitOS local GGUF inference"       org.opencontainers.image.vendor="NixitOS"       org.opencontainers.image.source="NixitOS build_files/usr/share/nixit-gguf-engine"
 
-# Keep runtime minimal: this image is the inference server. Host-side scripts drive
-# Podman benchmarks and model exploration so the container can stay close to upstream.
+# Keep runtime minimal: this image is the inference server. Host-side scripts
+# drive model exploration so the container can stay close to upstream.
 COPY config/models.config /config/models.config
 COPY docs/README.md /opt/nixit-gguf-engine/README.md
 

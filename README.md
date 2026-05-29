@@ -85,17 +85,14 @@ Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 
 ## 🤖 AI Locale & Motore GGUF NixitOS
 
-NixitOS include un workflow AI locale profondamente integrato tramite il wrapper `nixitos-llm`, che orchestra i container Podman di `llama.cpp`.
+NixitOS include un workflow AI locale profondamente integrato tramite container Podman di `llama.cpp`, orchestrati direttamente via `podman compose`.
 
 Il motore rileva dinamicamente il contesto hardware:
 - **Modalità iGPU:** Predefinita su Intel Arc (SYCL) per un'inferenza a basso consumo energetico.
-- **Modalità eGPU:** Se la eGPU NVIDIA Thunderbolt è collegata e autorizzata, `nixitos-llm` riconfigura dinamicamente lo stack per usare il container CUDA e scaricare il carico sulla RTX 3060.
+- **Modalità eGPU:** Se la eGPU NVIDIA Thunderbolt è collegata e autorizzata, il motore riconfigura dinamicamente lo stack per usare il container CUDA e scaricare il carico sulla RTX 3060.
 
 ### Comandi AI Comuni
-- `nixitos-llm up` / `nixitos-llm down` - Avvia/Ferma il server di inferenza.
-- `nixitos-llm download <hf_repo> <filename>` - Scarica in sicurezza i pesi GGUF tramite un container stateless ed effimero (es. `nixitos-llm download unsloth/gemma-4-E4B-it-GGUF *Q8_K_XL.gguf`).
-- `nixitos-llm bench-all` - Esegue la suite di validazione (richiede `MODEL=<router-section>`).
-
+- `podman compose -f /usr/share/nixit-gguf-engine/compose.yaml up -d` / `... down` - Avvia/Ferma il server di inferenza.
 ### 💬 Chatbot Locale (nixit-chat)
 
 `nixit-chat` è un chatbot interattivo da terminale che si connette al motore di inferenza locale. Supporta ricerca web e comandi di sistema.
