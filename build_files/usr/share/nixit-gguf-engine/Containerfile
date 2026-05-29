@@ -15,4 +15,5 @@ EXPOSE 8080
 
 # Router mode: the request JSON "model" field selects a section in /config/models.config.
 # slot-save-path enables slot management (unload/erase) for on-demand model unloading.
-CMD ["--host", "0.0.0.0", "--port", "8080", "--timeout", "1200", "--slot-save-path", "/tmp", "--models-preset", "/config/models.config"]
+# cache-type-k/v q8_0 keeps KV cache at half VRAM — essential for 1M context models.
+CMD ["--host", "0.0.0.0", "--port", "8080", "--timeout", "1200", "--slot-save-path", "/tmp", "--cache-type-k", "q8_0", "--cache-type-v", "q8_0", "--models-preset", "/config/models.config"]

@@ -65,6 +65,11 @@ NixitOS implements a two-tier backup architecture:
 - **Engine Management:** The local `llama.cpp` container is managed directly via `podman compose` using the compose definition at `/usr/share/nixit-gguf-engine/compose.yaml`. Use `podman compose -f /usr/share/nixit-gguf-engine/compose.yaml up -d` to start the engine.
 - **Engine Definition:** The GGUF engine compose, router config, and Containerfiles are maintained in this repo under `build_files/usr/share/nixit-gguf-engine/` and installed to `/usr/share/nixit-gguf-engine/`. Runtime state only belongs under `/var` or user state directories; the engine must not depend on ad-hoc directories in the user's home.
 - **Model Storage:** All downloaded models and configs must reside under `/var/llms/GGUF` (reachable via `~/LLMs/GGUF` thanks to the `~/LLMs` → `/var/llms` symlink). This guarantees they survive OS image updates and avoid bloating standard `/var/home` backups.
+- **KV Cache Budget:** `--cache-type-k q8_0 --cache-type-v q8_0` is the default (baked into the Containerfile CMD and compose env vars). This halves the KV cache VRAM footprint, keeping 1M-context models within the 10–15 GiB budget. Without it, a 1M-context 2B model would consume ~16.8 GiB instead of ~10.8 GiB.
+- **Registered Models (in models.config):**
+  - `qwen3-4b-instruct-2507-ud-q6xl-32k` — 4B params, Q6_K_XL, 32k context (~3.5 GB weights)
+  - `soren-1-small-f16-1m` — 2B params (Qwen3.5-based), F16, 1M context (~3.8 GB weights). Hybrid attention: 6/24 full-attn layers. Requires Q8_0 KV cache to fit 1M context within 10–15 GiB VRAM. Uses `--no-jinja --chat-template chatml` to work around a Jinja lexer issue with `!` characters in the baked-in system prompt.
+  - `gemma4-e4b-it-ud-q8xl-32k` — 4B params, Q8_K_XL, 32k context (model file not yet downloaded)
 
 ## 11. Local Terminal Chatbot (aria)
 

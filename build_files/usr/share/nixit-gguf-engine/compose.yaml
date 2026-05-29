@@ -21,6 +21,8 @@ services:
       GGML_SYCL_ENABLE_LEVEL_ZERO: "1"
       UR_L0_ENABLE_RELAXED_ALLOCATION_LIMITS: "1"
       ZES_ENABLE_SYSMAN: "1"
+      LLAMA_ARG_CACHE_TYPE_K: "q8_0"
+      LLAMA_ARG_CACHE_TYPE_V: "q8_0"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
