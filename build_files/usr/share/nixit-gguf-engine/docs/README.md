@@ -19,7 +19,7 @@ podman compose -f /usr/share/nixit-gguf-engine/compose.yaml logs -f
 podman compose -f /usr/share/nixit-gguf-engine/compose.yaml down
 ```
 
-`nixit-chat` usa lo stesso motore. Se l'API locale non è raggiungibile, prova ad avviare automaticamente il compose centralizzato.
+`aria` usa lo stesso motore. Se l'API locale non è raggiungibile, prova ad avviare automaticamente il compose centralizzato.
 
 ## Politica memoria locale
 

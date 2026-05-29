@@ -11,7 +11,7 @@ FROM ghcr.io/blue-build/base-images/fedora-silverblue-nvidia:44
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     rsync -a /ctx/ / && \
-    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/nixitos-home-backup /usr/bin/nixitos-home-restore /usr/bin/nixitos-daw-launcher /usr/bin/nixit-chat && \
+    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/nixitos-home-backup /usr/bin/nixitos-home-restore /usr/bin/nixitos-daw-launcher /usr/bin/aria && \
     chmod 0440 /etc/sudoers.d/egpu /etc/sudoers.d/tuned
 
 # ==========================================
@@ -131,12 +131,12 @@ RUN --mount=type=cache,dst=/var/cache \
     echo "NixitOS: NVIDIA is now on-demand only."
 
 # ==========================================
-# 2b. CHATBOT LOCALE (nixit-chat) — venv
+# 2b. CHATBOT LOCALE (aria) — venv
 # ==========================================
 
-RUN python3 -m venv --system-site-packages /usr/share/nixit-chat/venv && \
-    /usr/share/nixit-chat/venv/bin/pip install ddgs && \
-    rm -rf /usr/share/nixit-chat/venv/.cache
+RUN python3 -m venv --system-site-packages /usr/share/aria/venv && \
+    /usr/share/aria/venv/bin/pip install ddgs && \
+    rm -rf /usr/share/aria/venv/.cache
 
 # ==========================================
 # 3. BRANDING & IDENTITÀ

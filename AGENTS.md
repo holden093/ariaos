@@ -66,16 +66,16 @@ NixitOS implements a two-tier backup architecture:
 - **Engine Definition:** The GGUF engine compose, router config, and Containerfiles are maintained in this repo under `build_files/usr/share/nixit-gguf-engine/` and installed to `/usr/share/nixit-gguf-engine/`. Runtime state only belongs under `/var` or user state directories; the engine must not depend on ad-hoc directories in the user's home.
 - **Model Storage:** All downloaded models and configs must reside in `/var/llms` (symlinked to `~/LLMs/ggufs`). This guarantees they survive OS image updates and avoid bloating standard `/var/home` backups.
 
-## 11. Local Terminal Chatbot (nixit-chat)
+## 11. Local Terminal Chatbot (aria)
 
 ### Purpose
-`nixit-chat` is a terminal-based AI chatbot integrated into the NixitOS base image. It connects via SSE streaming to the local llama.cpp inference container (`nixit-gguf-engine` on `http://127.0.0.1:8080/v1`) and provides a conversational REPL with OpenAI-compatible function calling.
+`aria` is a terminal-based AI chatbot integrated into the NixitOS base image. It connects via SSE streaming to the local llama.cpp inference container (`nixit-gguf-engine` on `http://127.0.0.1:8080/v1`) and provides a conversational REPL with OpenAI-compatible function calling.
 
 ### Location
-`build_files/usr/bin/nixit-chat` is the single canonical command and the only chatbot entrypoint maintained in this repository. Do not add compatibility aliases or duplicate wrapper commands unless the user explicitly requests them.
+`build_files/usr/bin/aria` is the single canonical command and the only chatbot entrypoint maintained in this repository. Do not add compatibility aliases or duplicate wrapper commands unless the user explicitly requests them.
 
 ### Runtime Dependencies
-- **System venv:** `/usr/share/nixit-chat/venv` (created at build time in the Containerfile with `python3 -m venv --system-site-packages`, inheriting system `requests` and `psutil`). The only pip dependency installed in this venv is `ddgs` (DuckDuckGo search).
+- **System venv:** `/usr/share/aria/venv` (created at build time in the Containerfile with `python3 -m venv --system-site-packages`, inheriting system `requests` and `psutil`). The only pip dependency installed in this venv is `ddgs` (DuckDuckGo search).
 - **Containerfile addition:** `python3-pip` RPM, plus a dedicated RUN step that creates the venv and runs `pip install ddgs`.
 - **Python imports used:** `requests`, `json`, `datetime`, `os`, `sys`, `signal`, `textwrap`, `shutil`, `subprocess`, `random`, `re`, `pathlib`, `psutil` (lazy-imported in `system_info()`), `ddgs` (DuckDuckGo, try/except fallback to `duckduckgo_search`).
 
@@ -84,8 +84,8 @@ All user/host-specific values are resolved dynamically or via environment variab
 | Variable | Default | Purpose |
 |---|---|---|
 | `LLAMA_API` | `http://127.0.0.1:8080/v1` | llama.cpp OpenAI-compatible endpoint |
-| `NIXIT_CHAT_MODEL` | auto-detected from `/v1/models` (loaded `32k` profiles are preferred, then other loaded models), fallback `qwen3-4b-instruct-2507-ud-q6xl-32k` | Model to use |
-| `NIXIT_CHAT_COMPOSE` | `/usr/share/nixit-gguf-engine/compose.yaml` (with repo fallback during development) | Compose file for auto-starting the engine |
+| `ARIA_MODEL` | auto-detected from `/v1/models` (loaded `32k` profiles are preferred, then other loaded models), fallback `qwen3-4b-instruct-2507-ud-q6xl-32k`. Old `NIXIT_CHAT_MODEL` still supported. | Model to use |
+| `ARIA_COMPOSE` | `/usr/share/nixit-gguf-engine/compose.yaml` (with repo fallback during development). Old `NIXIT_CHAT_COMPOSE` still supported. | Compose file for auto-starting the engine |
 | `NIXIT_WORK_DIR` | `os.cwd()` | Write-allowed directory for `write_file()` |
 
 **Hardcoding rule:** NEVER add user-specific data (hostname, CPU model, RAM size, hardcoded paths). Always use `os.uname().nodename`, `psutil.cpu_count()`, `psutil.virtual_memory().total`, `os.getenv(...)` with sensible defaults, or `Path.home()`.
@@ -125,7 +125,7 @@ When `show_reasoning` is True (toggled via `/think`), thinking tokens print in g
 - `/new` — clear conversation history
 - Multiline input: `"""..."""` syntax for pasting blocks
 - Auto-start: if engine unreachable, runs `podman compose up -d` with configurable compose path
-- History persistence: JSON file at `~/.local/share/nixit-chat-history.json` (last 100 messages)
+- History persistence: JSON file at `~/.local/share/aria-history.json` (last 100 messages)
 - Exit messages: randomized from `EXIT_MSGS` list
 
 #### Model Selection and Local Memory Budget

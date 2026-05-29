@@ -2,7 +2,7 @@
 
 ## Project
 
-Immutable Fedora Silverblue derivative using bootc and blue-build, purpose-built for asymmetric dual-GPU AI/LLM workloads on Intel Arc (primary) + NVIDIA eGPU (on-demand). Tech stack: Fedora 44, bootc, blue-build, Containerfile, Podman Compose, bash (system scripts), Python (nixit-chat chatbot).
+Immutable Fedora Silverblue derivative using bootc and blue-build, purpose-built for asymmetric dual-GPU AI/LLM workloads on Intel Arc (primary) + NVIDIA eGPU (on-demand). Tech stack: Fedora 44, bootc, blue-build, Containerfile, Podman Compose, bash (system scripts), Python (aria chatbot).
 
 ## Structure
 
@@ -15,7 +15,7 @@ Non-standard: the Containerfile at repo root defines a bootc-compatible OS image
 - Lint (run inside container build as final step): `bootc container lint`
 - Activate NVIDIA eGPU (on-demand only): `sudo egpu-up.sh`
 - Deactivate NVIDIA eGPU: requires logout/reboot first, then `sudo egpu-down.sh`
-- Chat with local AI: `nixit-chat`
+- Chat with local AI: `aria`
 - Export home backup: `sudo nixitos-home-backup`
 - Restore home backup on fresh install: `sudo nixitos-home-restore`
 
@@ -31,7 +31,7 @@ Non-standard: the Containerfile at repo root defines a bootc-compatible OS image
 ## Key Files
 
 - `Containerfile` -- OS image definition: packages, services, branding, NVIDIA blacklist, initramfs regeneration, bootc lint.
-- `build_files/usr/bin/nixit-chat` -- Local AI chatbot (824 lines Python): system-prompt-based assistant with tool calling, web search, system info, file read/write. Auto-starts the GGUF engine if not running.
+- `build_files/usr/bin/aria` -- Local AI chatbot (824 lines Python): system-prompt-based assistant with tool calling, web search, system info, file read/write. Auto-starts the GGUF engine if not running.
 - `build_files/usr/bin/egpu-up.sh` -- NVIDIA eGPU activation script: loads blacklisted kernel modules via modprobe --ignore-install, initializes device nodes with 0666 permissions.
 - `build_files/usr/share/nixit-gguf-engine/compose.yaml` -- Podman Compose definition for llama.cpp inference container with SYCL device passthrough and healthcheck.
 - `build_files/usr/share/nixit-gguf-engine/config/models.config` -- LLM router preset with model profiles, context window sizes (capped at 32768 locally), and hardware constraints (parallel=1, flash-attn=on, n-gpu-layers=999).

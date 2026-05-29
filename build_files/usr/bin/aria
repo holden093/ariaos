@@ -1,6 +1,6 @@
-#!/usr/share/nixit-chat/venv/bin/python3
+#!/usr/share/aria/venv/bin/python3
 """
-nixit-chat — Assistente locale NixitOS
+aria — Assistente AI locale NixitOS
 Motore: llama.cpp (Intel Arc SYCL)
 
 Comandi rapidi:
@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import random
 import time
+import atexit
 import readline  # noqa: F401
 from pathlib import Path
 
@@ -31,8 +32,8 @@ import psutil
 
 # ── Configurazione ──────────────────────────
 LLAMA_API = os.getenv("LLAMA_API", "http://127.0.0.1:8080/v1")
-MODEL = os.getenv("NIXIT_CHAT_MODEL", "")
-HISTORY_FILE = Path.home() / ".local" / "share" / "nixit-chat-history.json"
+MODEL = os.getenv("ARIA_MODEL", os.getenv("NIXIT_CHAT_MODEL", ""))
+HISTORY_FILE = Path.home() / ".local" / "share" / "aria-history.json"
 NIXIT_WORK_DIR = Path.cwd()
 
 # Colori terminale
@@ -58,7 +59,7 @@ EXIT_MSGS = [
 ]
 
 PARTY_LINES = [
-    "PS: se ti serve, sono sempre a portata di nixit-chat!",
+    "PS: se ti serve, sono sempre a portata di aria!",
     "Ricorda: posso anche leggere file e salvare appunti.",
     "Psst: /model per cambiare modello al volo.",
     "Il caffè è nella macchina in cucina. Ah, no, quello è un'altro assistente.",
@@ -163,11 +164,11 @@ def default_compose_path() -> str:
     """Restituisce il compose centralizzato del motore GGUF.
 
     Ordine:
-    1. NIXIT_CHAT_COMPOSE, se definito.
+    1. ARIA_COMPOSE (o NIXIT_CHAT_COMPOSE per retrocompatibilità), se definito.
     2. Percorso installato nell'immagine NixitOS.
     3. Percorso del repo, utile durante lo sviluppo prima del rebuild bootc.
     """
-    override = os.getenv("NIXIT_CHAT_COMPOSE")
+    override = os.getenv("ARIA_COMPOSE", os.getenv("NIXIT_CHAT_COMPOSE"))
     if override:
         return override
     installed = Path("/usr/share/nixit-gguf-engine/compose.yaml")
@@ -214,6 +215,44 @@ def try_start_engine() -> bool:
     except Exception as e:
         print(f"  {C['r']}❌ {e}{C['re']}")
         return False
+
+
+# ── Scarico modello ──────────────────────────
+def unload_model() -> None:
+    """Scarica il modello dal server llama.cpp per liberare GPU/RAM.
+
+    Chiamata automaticamente all'uscita (anche SIGTERM/SIGHUP).
+    Usa l'API slot erase per svuotare la KV cache; il server
+    gestisce poi l'evizione dei pesi. Se il server non supporta
+    lo slot management, fallisce silenziosamente.
+    """
+    if not MODEL:
+        return
+    try:
+        base_url = LLAMA_API.rstrip("/").rsplit("/", 1)[0]
+        # Individua lo slot che ospita il modello
+        resp = requests.get(f"{base_url}/slots", params={"model": MODEL}, timeout=5)
+        resp.raise_for_status()
+        slots = resp.json()
+        if not slots:
+            return
+        slot_id = slots[0]["id"]
+        # Svuota la KV cache dello slot (action=erase richiede --slot-save-path)
+        requests.post(
+            f"{base_url}/slots/{slot_id}?action=erase",
+            json={"model": MODEL},
+            timeout=5,
+        )
+    except Exception:
+        pass  # Server senza --slot-save-path o non raggiungibile
+
+
+def _cleanup() -> None:
+    """Handler atexit: scarica il modello prima di uscire."""
+    unload_model()
+
+
+atexit.register(_cleanup)
 
 
 # ── Strumenti ───────────────────────────────
@@ -684,7 +723,7 @@ def chat_loop():
                 for m in models:
                     marker = f"{C['g']}← attivo{C['re']}" if m == current else ""
                     print(f"    {m:45s} {marker}")
-                print(f"\n  {C['d']}Per cambiare: NIXIT_CHAT_MODEL=<nome> nixit-chat{C['re']}")
+                print(f"\n  {C['d']}Per cambiare: ARIA_MODEL=<nome> aria{C['re']}")
                 continue
 
             elif cl == "think":
@@ -825,5 +864,8 @@ def chat_loop():
 
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGINT, lambda s, f: sys.exit(0))
+    # SIGINT (Ctrl+C), SIGTERM (kill), SIGHUP (terminale chiuso)
+    # → sys.exit(0) attiva atexit → _cleanup() → unload_model()
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, lambda s, f: sys.exit(0))
     chat_loop()

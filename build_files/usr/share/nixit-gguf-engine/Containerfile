@@ -14,4 +14,5 @@ ENV ONEAPI_DEVICE_SELECTOR=level_zero:0     GGML_SYCL_ENABLE_LEVEL_ZERO=1     UR
 EXPOSE 8080
 
 # Router mode: the request JSON "model" field selects a section in /config/models.config.
-CMD ["--host", "0.0.0.0", "--port", "8080", "--timeout", "1200", "--models-preset", "/config/models.config"]
+# slot-save-path enables slot management (unload/erase) for on-demand model unloading.
+CMD ["--host", "0.0.0.0", "--port", "8080", "--timeout", "1200", "--slot-save-path", "/tmp", "--models-preset", "/config/models.config"]

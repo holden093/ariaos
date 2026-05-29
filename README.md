@@ -93,11 +93,11 @@ Il motore rileva dinamicamente il contesto hardware:
 
 ### Comandi AI Comuni
 - `podman compose -f /usr/share/nixit-gguf-engine/compose.yaml up -d` / `... down` - Avvia/Ferma il server di inferenza.
-### 💬 Chatbot Locale (nixit-chat)
+### 💬 Chatbot Locale (aria)
 
-`nixit-chat` è un chatbot interattivo da terminale che si connette al motore di inferenza locale. Supporta ricerca web e comandi di sistema.
+`aria` è un chatbot interattivo da terminale che si connette al motore di inferenza locale. Supporta ricerca web e comandi di sistema.
 
-- **Avvio:** `nixit-chat`.
+- **Avvio:** `aria`.
 - **Profilo locale:** il rilevamento automatico preferisce i profili `32k`, mantenendo il budget GPU condiviso entro circa 10 GiB. I contesti lunghi vanno eseguiti su `api.ai.nixit.it`.
 - **Ricerca web:** Il modello chiama automaticamente DuckDuckGo quando necessario. Forzabile con `/web <query>`.
 - **Stato sistema:** Il modello rileva automaticamente quando l'utente chiede informazioni sul sistema. Forzabile con `/sys [cpu|mem|disk|gpu|proc]`.
