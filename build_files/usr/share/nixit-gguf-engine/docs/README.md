@@ -7,7 +7,7 @@ Motore locale GGUF per NixitOS basato su `llama.cpp` in modalità server OpenAI-
 - Configurazione installata: `/usr/share/nixit-gguf-engine/`
 - Compose installato: `/usr/share/nixit-gguf-engine/compose.yaml`
 - Config router: `/usr/share/nixit-gguf-engine/config/models.config`
-- Modelli GGUF: `/var/llms/ggufs`
+- Modelli GGUF: `/var/home/kevin/LLMs/GGUF`
 - API locale: `http://127.0.0.1:8080/v1`
 
 ## Uso

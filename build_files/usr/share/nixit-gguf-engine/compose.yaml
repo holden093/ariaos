@@ -9,7 +9,7 @@ services:
     ports:
       - "127.0.0.1:${LLAMA_PORT:-8080}:8080"
     volumes:
-      - "${MODEL_DIR:-/var/llms/ggufs}:/models:Z"
+      - "${MODEL_DIR:-/var/home/kevin/LLMs/GGUF}:/models:Z"
       - "${MODELS_CONFIG:-/usr/share/nixit-gguf-engine/config/models.config}:/config/models.config:ro"
     devices:
       - "/dev/dri:/dev/dri"
