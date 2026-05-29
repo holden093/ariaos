@@ -32,7 +32,7 @@ import psutil
 
 # ── Configurazione ──────────────────────────
 LLAMA_API = os.getenv("LLAMA_API", "http://127.0.0.1:8080/v1")
-MODEL = os.getenv("ARIA_MODEL", os.getenv("NIXIT_CHAT_MODEL", ""))
+MODEL = os.getenv("ARIA_MODEL", "")
 HISTORY_FILE = Path.home() / ".local" / "share" / "aria-history.json"
 NIXIT_WORK_DIR = Path.cwd()
 
@@ -164,11 +164,11 @@ def default_compose_path() -> str:
     """Restituisce il compose centralizzato del motore GGUF.
 
     Ordine:
-    1. ARIA_COMPOSE (o NIXIT_CHAT_COMPOSE per retrocompatibilità), se definito.
+    1. ARIA_COMPOSE, se definito.
     2. Percorso installato nell'immagine NixitOS.
     3. Percorso del repo, utile durante lo sviluppo prima del rebuild bootc.
     """
-    override = os.getenv("ARIA_COMPOSE", os.getenv("NIXIT_CHAT_COMPOSE"))
+    override = os.getenv("ARIA_COMPOSE")
     if override:
         return override
     installed = Path("/usr/share/nixit-gguf-engine/compose.yaml")

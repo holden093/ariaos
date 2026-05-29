@@ -84,8 +84,8 @@ All user/host-specific values are resolved dynamically or via environment variab
 | Variable | Default | Purpose |
 |---|---|---|
 | `LLAMA_API` | `http://127.0.0.1:8080/v1` | llama.cpp OpenAI-compatible endpoint |
-| `ARIA_MODEL` | auto-detected from `/v1/models` (loaded `32k` profiles are preferred, then other loaded models), fallback `qwen3-4b-instruct-2507-ud-q6xl-32k`. Old `NIXIT_CHAT_MODEL` still supported. | Model to use |
-| `ARIA_COMPOSE` | `/usr/share/nixit-gguf-engine/compose.yaml` (with repo fallback during development). Old `NIXIT_CHAT_COMPOSE` still supported. | Compose file for auto-starting the engine |
+| `ARIA_MODEL` | auto-detected from `/v1/models` (loaded `32k` profiles are preferred, then other loaded models), fallback `qwen3-4b-instruct-2507-ud-q6xl-32k`. | Model to use |
+| `ARIA_COMPOSE` | `/usr/share/nixit-gguf-engine/compose.yaml` (with repo fallback during development). | Compose file for auto-starting the engine |
 | `NIXIT_WORK_DIR` | `os.cwd()` | Write-allowed directory for `write_file()` |
 
 **Hardcoding rule:** NEVER add user-specific data (hostname, CPU model, RAM size, hardcoded paths). Always use `os.uname().nodename`, `psutil.cpu_count()`, `psutil.virtual_memory().total`, `os.getenv(...)` with sensible defaults, or `Path.home()`.
