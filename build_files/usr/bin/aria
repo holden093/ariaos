@@ -14,6 +14,7 @@ Comandi rapidi:
 Integrato in NixitOS come comando di sistema.
 """
 
+import re
 import requests
 import json
 import datetime
@@ -24,7 +25,6 @@ import shutil
 import subprocess
 import random
 import time
-import atexit
 import readline  # noqa: F401
 from pathlib import Path
 
@@ -76,17 +76,22 @@ def detect_model() -> str:
             return m["id"] not in ("default",)
 
         def score(model_id: str) -> tuple[int, int, str]:
-            # Il laptop deve restare nel profilo locale 32k/<=10 GiB.
-            # Qwen 4B Q6 è il default interattivo veloce; Gemma resta
-            # disponibile solo se selezionata esplicitamente o se Qwen manca.
+            # Soren-1-Small F16 (1M ctx) è il default principale: 2B params
+            # Qwen3.5-based, hybrid attention 6/24, KV cache Q8_0 ~6 GB.
+            # Qwen 4B Q6 è il fallback veloce 32k; Gemma disponibile solo
+            # se selezionata esplicitamente o se mancano entrambi.
             # I profili 128k appartengono al server lungo-contesto e rendono
             # l'avvio interattivo apparentemente bloccato per via del prompt
             # processing molto lento.
             ctx_rank = 0 if "32k" in model_id else (2 if "128k" in model_id else 1)
-            model_rank = 0 if "qwen" in model_id.lower() else 1
-            # Il model_id come terzo elemento risolve i pareggi in modo
-            # deterministico (alfabetico) tra modelli di pari rango.
-            return (ctx_rank, model_rank, model_id)
+            if "soren" in model_id.lower():
+                model_rank = 0
+            elif "qwen" in model_id.lower():
+                model_rank = 1
+            else:
+                model_rank = 2
+            # model_rank ha precedenza su ctx_rank: Soren vince sempre
+            return (model_rank, ctx_rank, model_id)
 
         loaded = [m["id"] for m in models
                   if usable(m)
@@ -99,7 +104,97 @@ def detect_model() -> str:
             return sorted(available, key=score)[0]
     except Exception:
         pass
-    return "qwen3-4b-instruct-2507-ud-q6xl-32k"
+    return "soren-1-small-f16-1m"
+
+
+def list_models_from_config() -> list:
+    """Legge i modelli direttamente dal file models.config.
+
+    Parsa il file di configurazione del server (formato TOML/INI-like)
+    per estrarre i nomi delle sezioni modello, escludendo il blocco
+    globale [*]. Questo è il source of truth — non richiede che il
+    server sia in esecuzione o abbia riletto la config.
+    """
+    config_path = os.getenv("MODELS_CONFIG")
+    if not config_path:
+        installed = Path("/usr/share/nixit-gguf-engine/config/models.config")
+        if installed.exists():
+            config_path = str(installed)
+        else:
+            repo_candidate = Path(__file__).resolve().parents[2] / "usr/share/nixit-gguf-engine/config/models.config"
+            if repo_candidate.exists():
+                config_path = str(repo_candidate)
+
+    if not config_path:
+        return []
+
+    try:
+        raw = Path(config_path).read_text(encoding="utf-8")
+    except Exception:
+        return []
+
+    # Estrai i nomi delle sezioni [nome-modello] escludendo [*]
+    models = []
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]") and not stripped.startswith("[*"):
+            name = stripped[1:-1].strip()
+            if name:
+                models.append(name)
+    return models
+
+
+def choose_model() -> str:
+    """Menu interattivo per scegliere il modello all'avvio.
+
+    Mostra i modelli disponibili con il default pre-selezionato.
+    L'utente preme Invio per il default o digita il numero del modello.
+    Se c'è un solo modello, lo restituisce direttamente senza menu.
+    """
+    default = MODEL or detect_model()
+    models = list_models_from_config()
+
+    if not models:
+        print(f"\n  {C['r']}❌ Nessun modello configurato in models.config.{C['re']}")
+        sys.exit(1)
+
+    # Un solo modello → usalo direttamente
+    if len(models) == 1:
+        print(f"\n  {C['d']}Modello configurato: {C['b']}{models[0]}{C['re']}")
+        return models[0]
+
+    # Cerca il default nella lista (potrebbe non esserci se ARIA_MODEL è
+    # impostato a un modello non presente nella config)
+    try:
+        default_idx = models.index(default)
+    except ValueError:
+        default_idx = 0
+        default = models[0]
+
+    # Menu
+    print(f"\n  {C['b']}Scegli il modello:{C['re']}")
+    for i, m in enumerate(models):
+        marker = f" {C['g']}← default{C['re']}" if m == default else ""
+        print(f"  {C['g']}[{i + 1}]{C['re']} {m}{marker}")
+
+    while True:
+        try:
+            choice = input(f"\n  {C['d']}Modello [{default}]:{C['re']} ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            sys.exit(0)
+
+        if not choice:
+            return default
+
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(models):
+                return models[idx]
+        except ValueError:
+            pass
+
+        print(f"  {C['r']}Scelta non valida. Inserisci un numero (1-{len(models)}) o Invio.{C['re']}")
 
 
 def list_models() -> list:
@@ -137,7 +232,7 @@ Rispondi in italiano, sii concisa e vai dritta al punto.
 - GPU: Intel Arc integrata, eGPU NVIDIA opzionale (egpu-up.sh)
 - RAM: {mem_gb:.0f} GB · OS: NixitOS (bootc, immutabile)
 - Motore: llama.cpp su Intel Arc SYCL
-- Modello: Qwen3-4B (veloce, 21 t/s, nessun thinking overhead)
+- Modello: variabile (default: Soren-1-Small F16, 1M contesto)
 
 ## Strumenti a disposizione
 - web_search(query) — cerca su internet (DuckDuckGo)
@@ -218,41 +313,11 @@ def try_start_engine() -> bool:
 
 
 # ── Scarico modello ──────────────────────────
-def unload_model() -> None:
-    """Scarica il modello dal server llama.cpp per liberare GPU/RAM.
-
-    Chiamata automaticamente all'uscita (anche SIGTERM/SIGHUP).
-    Usa l'API slot erase per svuotare la KV cache; il server
-    gestisce poi l'evizione dei pesi. Se il server non supporta
-    lo slot management, fallisce silenziosamente.
-    """
-    if not MODEL:
-        return
-    try:
-        base_url = LLAMA_API.rstrip("/").rsplit("/", 1)[0]
-        # Individua lo slot che ospita il modello
-        resp = requests.get(f"{base_url}/slots", params={"model": MODEL}, timeout=5)
-        resp.raise_for_status()
-        slots = resp.json()
-        if not slots:
-            return
-        slot_id = slots[0]["id"]
-        # Svuota la KV cache dello slot (action=erase richiede --slot-save-path)
-        requests.post(
-            f"{base_url}/slots/{slot_id}?action=erase",
-            json={"model": MODEL},
-            timeout=5,
-        )
-    except Exception:
-        pass  # Server senza --slot-save-path o non raggiungibile
-
-
-def _cleanup() -> None:
-    """Handler atexit: scarica il modello prima di uscire."""
-    unload_model()
-
-
-atexit.register(_cleanup)
+# Lo scarico dei modelli è gestito dal server llama.cpp tramite
+# stop-timeout (20 s di inattività → slot fermato e pesi scaricati).
+# Forzare l'unload dall'esterno è controproducente: il modello
+# resterebbe in VRAM tra una sessione e l'altra, che è il comportamento
+# desiderato per riavvii rapidi.
 
 
 # ── Strumenti ───────────────────────────────
@@ -627,9 +692,6 @@ def chat_loop():
     global MODEL
     show_reasoning = True  # /think per toggle
 
-    if not MODEL:
-        MODEL = detect_model()
-
     # Controllo connessione motore
     try:
         requests.get(f"{LLAMA_API}/models", timeout=3)
@@ -637,6 +699,9 @@ def chat_loop():
         if not try_start_engine():
             print(f"\n  {C['y']}ℹ  Per avviare manualmente: podman compose -f {default_compose_path()} up -d{C['re']}")
             sys.exit(1)
+
+    # Menu interattivo: scegli il modello (default = Soren o ARIA_MODEL se impostato)
+    MODEL = choose_model()
 
     messages = load_history()
     if not messages:
@@ -723,7 +788,7 @@ def chat_loop():
                 for m in models:
                     marker = f"{C['g']}← attivo{C['re']}" if m == current else ""
                     print(f"    {m:45s} {marker}")
-                print(f"\n  {C['d']}Per cambiare: ARIA_MODEL=<nome> aria{C['re']}")
+                print(f"\n  {C['d']}Per cambiare: riavvia aria e scegli dal menu, o ARIA_MODEL=<nome> aria{C['re']}")
                 continue
 
             elif cl == "think":
@@ -745,6 +810,7 @@ def chat_loop():
         # Ciclo tool calling + risposta finale in streaming
         tool_rounds = 0
         content_acc = ""
+        _visible_len = 0
         reasoning_acc = ""
         reasoning_header_shown = False
         final_usage = {}
@@ -763,8 +829,13 @@ def chat_loop():
                         print(f"\r  {C['r']}❌ Motore non raggiungibile.{C['re']}")
                     else:
                         print(f"\r  {C['r']}❌ {event['text']}{C['re']}")
-                    messages.pop()
+                    # Rimuovi il messaggio utente che ha causato l'errore
+                    # (solo se è ancora in coda — il while loop potrebbe averlo già rimosso)
+                    if messages and messages[-1]["role"] == "user":
+                        messages.pop()
                     content_acc = ""
+                    _visible_len = 0
+                    done_final = True  # Esci dal while loop, non ritentare su errori server
                     break
 
                 # ── Reasoning in tempo reale (a capo naturale, toggle con /think) ──
@@ -783,8 +854,19 @@ def chat_loop():
                     # Prima parola: separa dal pensiero con una riga vuota
                     if not content_acc and reasoning_header_shown:
                         print()
+                    prev_visible = _visible_len
                     content_acc += event["text"]
-                    print(f"{event['text']}", end="", flush=True)
+                    # Filtra tag  response/ che i modelli Qwen-based
+                    # emettono come testo anche senza thinking reale.
+                    # Primo pass: rimuovi blocchi completi.
+                    # Secondo pass: rimuovi tag orfani (non ancora chiusi in streaming).
+                    clean = re.sub(r'\s*<think>.*?</think>\s*', ' ', content_acc, flags=re.DOTALL)
+                    clean = re.sub(r'</?think>', '', clean)
+                    clean = clean.strip()
+                    new_visible = clean[prev_visible:]
+                    if new_visible:
+                        print(new_visible, end="", flush=True)
+                        _visible_len = len(clean)
 
                 # ── Fine ──
                 elif event["type"] == "done":
@@ -816,6 +898,7 @@ def chat_loop():
                             tool_result = run_tool(name, args)
                             messages.append({"role": "tool", "tool_call_id": tc["id"], "content": tool_result})
                         content_acc = ""
+                        _visible_len = 0
                         reasoning_acc = ""
                         break  # for loop → while loop → next round
 
@@ -865,7 +948,7 @@ def chat_loop():
 
 if __name__ == "__main__":
     # SIGINT (Ctrl+C), SIGTERM (kill), SIGHUP (terminale chiuso)
-    # → sys.exit(0) attiva atexit → _cleanup() → unload_model()
+    # → sys.exit(0) — il server gestisce lo scarico modelli via stop-timeout
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, lambda s, f: sys.exit(0))
     chat_loop()
