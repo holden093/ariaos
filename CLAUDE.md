@@ -24,7 +24,7 @@ Non-standard: the Containerfile at repo root defines a bootc-compatible OS image
 - NVIDIA modules are never loaded at boot. The file build_files/etc/modprobe.d/blacklist-nvidia.conf uses `install <module> /bin/false` (not `alias <module> off`, which breaks `--ignore-install` loading). Activation requires explicit `modprobe --ignore-install` via egpu-up.sh.
 - Btrfs subvolumes for heavy data (llms/, games/) are created via systemd-tmpfiles, symlinked under /var/home, excluded from home snapshots so backups stay lean.
 - zRAM is configured at 16GB zstd to keep 32GB physical RAM available for LLM inference models.
-- LLM context is capped at 32k for local inference; 128k profiles are explicitly excluded from models.config -- they are only available via the remote inference API at api.ai.nixit.it.
+- LLM context is capped at 32k for local inference; 128k profiles are explicitly excluded from config.ini -- they are only available via the remote inference API at api.ai.nixit.it.
 - Flatpaks must never be used for critical system apps (backup tools, core utilities). Exception: Pika Backup is authorized as a Flatpak for GNOME integration.
 - Scripts in usr/bin use `set -euo pipefail` (bash) and are installed with `chmod +x` in the Containerfile.
 
@@ -34,7 +34,7 @@ Non-standard: the Containerfile at repo root defines a bootc-compatible OS image
 - `build_files/usr/bin/aria` -- Local AI chatbot (824 lines Python): system-prompt-based assistant with tool calling, web search, system info, file read/write. Auto-starts the GGUF engine if not running.
 - `build_files/usr/bin/egpu-up.sh` -- NVIDIA eGPU activation script: loads blacklisted kernel modules via modprobe --ignore-install, initializes device nodes with 0666 permissions.
 - `build_files/usr/share/nixit-gguf-engine/compose.yaml` -- Podman Compose definition for llama.cpp inference container with SYCL device passthrough and healthcheck.
-- `build_files/usr/share/nixit-gguf-engine/config/models.config` -- LLM router preset with model profiles, context window sizes (capped at 32768 locally), and hardware constraints (parallel=1, flash-attn=on, n-gpu-layers=999).
-- `build_files/usr/share/nixit-gguf-engine/Containerfile` -- Containerfile for the llama.cpp SYCL inference image (builds from ghcr.io/ggml-org/llama.cpp:server-intel).
+- `$HOME/LLMs/GGUF/config.ini` — LLM router preset with model profiles, context window sizes, and hardware constraints. The compose bind-mounts it into the container at `/config/config.ini`. User-owned, survives OS updates.
+- `build_files/usr/share/nixit-gguf-engine/compose.yaml` — Podman Compose definition for the llama.cpp inference container (uses upstream `ghcr.io/ggml-org/llama.cpp:server-intel` directly, all config in the compose).
 - `AGENTS.md` -- Technical architecture reference: hardware constraints, optimization rules, validation mandates, and the source of truth for AI agents working on the project.
 - `.github/workflows/build-image.yml` -- CI/CD pipeline: buildah build, GHCR push, daily rebuild schedule, PR preview builds.
