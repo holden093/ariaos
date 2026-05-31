@@ -1,4 +1,4 @@
-# NixitOS Best Practices
+# AriaOS Best Practices
 
 ## Fedora Silverblue & bootc
 - **Minimalism**: Only include packages in the base image that are essential for the system to boot and provide core functionality. Use Flatpaks or Distroboxes for user applications.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-echo "=== NixitOS Efficiency Report ==="
+echo "=== AriaOS Efficiency Report ==="
 echo "Date: $(date)"
 echo "Kernel: $(uname -r)"
 

@@ -1,4 +1,4 @@
-# 🏨 NixitOS
+# 🏨 AriaOS
 
 **Un sistema operativo immutabile, minimale e ottimizzato per workload AI locali.**
 
@@ -6,7 +6,7 @@
 
 ## ⚠️ Disclaimer Importante
 
-**ATTENZIONE**: Questa repository **NON** è intesa per l'uso pubblico o generale. NixitOS è una configurazione (basata su `bootc` e `blue-build`) creata in modo sartoriale esclusivamente per uno specifico hardware locale. Contiene script e regole che potrebbero causare instabilità su macchine diverse. **Non installare questa immagine sul tuo computer.**
+**ATTENZIONE**: Questa repository **NON** è intesa per l'uso pubblico o generale. AriaOS è una configurazione (basata su `bootc` e `blue-build`) creata in modo sartoriale esclusivamente per uno specifico hardware locale. Contiene script e regole che potrebbero causare instabilità su macchine diverse. **Non installare questa immagine sul tuo computer.**
 
 ---
 
@@ -20,17 +20,17 @@
 * **Storage GitOps (Subvolumi Dinamici)**: Utilizzo nativo di `systemd-tmpfiles` per creare automaticamente subvolumi Btrfs per i dati pesanti (es. `llms`, `games`) in `/var`. Questi vengono poi collegati alla `/var/home` via symlink, garantendo che i backup della Home tramite snapshot siano leggerissimi ed escludano automaticamente questi enormi file. Il filesystem Btrfs utilizza compressione nativa trasparente (`zstd:1`) per prolungare la vita dell'SSD, insieme a task periodici e automatizzati in background (scrub e bilanciamento tramite `btrfsmaintenance`) per prevenire il *bit-rot* e garantire l'integrità dei dati a lungo termine.
 * **Ottimizzazione CPU Avanzata**: Disattivazione dell'NMI Watchdog (`nowatchdog`) per permettere ai core di raggiungere i C-states di sonno più profondi.
 * **Ottimizzazione RAM per AI**: zRAM configurata a 16GB (algoritmo `zstd`) per comprimere il sistema operativo e lasciare la memoria fisica (32GB) libera per i modelli LLM.
-* **Audio a Bassa Latenza (Dynamic Tuning)**: Abbandono dei parametri kernel energivori in favore di uno script wrapper (`nixitos-daw-launcher`) che massimizza le frequenze e riduce le latenze tramite `tuned` **solo** durante l'uso della DAW, preservando la batteria nell'uso quotidiano.
+* **Audio a Bassa Latenza (Dynamic Tuning)**: Abbandono dei parametri kernel energivori in favore di uno script wrapper (`ariaos-daw-launcher`) che massimizza le frequenze e riduce le latenze tramite `tuned` **solo** durante l'uso della DAW, preservando la batteria nell'uso quotidiano.
 * **Sicurezza & Cifratura TPM 2.0**: Supporto nativo LUKS2 automatizzato tramite chip TPM 2.0 usando Discoverable Partitions Specification (DPS).
 
 ## 🚦 Avvio Rapido
 
-Per passare da un'installazione pulita di Fedora a NixitOS con tutti i dati:
+Per passare da un'installazione pulita di Fedora a AriaOS con tutti i dati:
 
 1. **Installa Fedora (Silverblue/Kinoite/Base)**: Assicurati di creare un subvolume Btrfs separato per `/home` e spunta **"Encrypt my data"** durante l'installazione.
-2. **Rebase su NixitOS**: Apri il terminale nel nuovo sistema ed esegui il rebase:
+2. **Rebase su AriaOS**: Apri il terminale nel nuovo sistema ed esegui il rebase:
    ```bash
-   sudo bootc switch ghcr.io/holden093/nixitos:latest
+   sudo bootc switch ghcr.io/holden093/ariaos:latest
    ```
    *(Attendi il completamento e riavvia il sistema).*
 3. **Ripristino della Home (TUI)**: Al riavvio, prima del login grafico, passa a una TTY (`Ctrl+Alt+F3`), collega il disco USB di backup e lancia:
@@ -38,7 +38,7 @@ Per passare da un'installazione pulita di Fedora a NixitOS con tutti i dati:
    sudo restore
    ```
 4. **Abilita Audio a Bassa Latenza** (Obbligatorio per produzione audio):
-   Affinché le ottimizzazioni in tempo reale e lo script `nixitos-daw-launcher` funzionino, devi aggiungere il tuo utente ai gruppi `realtime` e `audio`:
+   Affinché le ottimizzazioni in tempo reale e lo script `ariaos-daw-launcher` funzionino, devi aggiungere il tuo utente ai gruppi `realtime` e `audio`:
    ```bash
    sudo usermod -aG realtime,audio $USER
    ```
@@ -83,28 +83,28 @@ Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 * **`backup`**: Utility TUI legacy per il Disaster Recovery "Bare-Metal". Esporta la `/var/home` in un file monolitico zstd sfruttando `btrfs send`. Da usare per backup integrali offline su USB prima di formattare.
 * **`restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup monolitico zstd su installazioni pulite.
 
-## 🤖 AI Locale & Motore GGUF NixitOS
+## 🤖 AI Locale & Motore GGUF AriaOS
 
-NixitOS include un workflow AI locale profondamente integrato tramite container Podman di `llama.cpp`, orchestrati direttamente via `podman compose`.
+AriaOS include un workflow AI locale profondamente integrato tramite container Podman di `llama.cpp`, orchestrati direttamente via `podman compose`.
 
 Il motore rileva dinamicamente il contesto hardware:
 - **Modalità iGPU:** Predefinita su Intel Arc (SYCL) per un'inferenza a basso consumo energetico.
 - **Modalità eGPU:** Se la eGPU NVIDIA Thunderbolt è collegata e autorizzata, il motore riconfigura dinamicamente lo stack per usare il container CUDA e scaricare il carico sulla RTX 3060.
 
 ### Comandi AI Comuni
-- `podman compose -f /usr/share/nixit-gguf-engine/compose.yaml up -d` / `... down` - Avvia/Ferma il server di inferenza.
+- `podman compose -f /usr/share/aria-gguf-engine/compose.yaml up -d` / `... down` - Avvia/Ferma il server di inferenza.
 ### 💬 Chatbot Locale (aria)
 
 `aria` è un chatbot interattivo da terminale che si connette al motore di inferenza locale. Supporta ricerca web e comandi di sistema.
 
 - **Avvio:** `aria`.
-- **Profilo locale:** il rilevamento automatico preferisce i profili `32k`, mantenendo il budget GPU condiviso entro circa 10 GiB. I contesti lunghi vanno eseguiti su `api.ai.nixit.it`.
+- **Profilo locale:** il rilevamento automatico preferisce i profili `32k`, mantenendo il budget GPU condiviso entro circa 10 GiB.
 - **Ricerca web:** Il modello chiama automaticamente DuckDuckGo quando necessario. Forzabile con `/web <query>`.
 - **Stato sistema:** Il modello rileva automaticamente quando l'utente chiede informazioni sul sistema. Forzabile con `/sys [cpu|mem|disk|gpu|proc]`.
 - **Comandi:** `/help`, `/new`, `/exit`
 
-Dipende dal container `nixit-gguf-engine` in esecuzione su `127.0.0.1:8080`. La definizione del motore è centralizzata nel repo in `build_files/usr/share/nixit-gguf-engine/` e viene installata in `/usr/share/nixit-gguf-engine/`; non dipende da directory operative esterne nella home utente.
+Dipende dal container `aria-gguf-engine` in esecuzione su `127.0.0.1:8080`. La definizione del motore è centralizzata nel repo in `build_files/usr/share/aria-gguf-engine/` e viene installata in `/usr/share/aria-gguf-engine/`; non dipende da directory operative esterne nella home utente.
 
 ## 📖 Documentazione
 
-Per i dettagli tecnici, i vincoli architetturali completi, la pipeline GitOps e le istruzioni esclusive per gli agenti IA, consulta il file **[AGENTS.md](AGENTS.md)**. Costituisce la vera "Source of Truth" tecnica del progetto NixitOS.
+Per i dettagli tecnici, i vincoli architetturali completi, la pipeline GitOps e le istruzioni esclusive per gli agenti IA, consulta il file **[AGENTS.md](AGENTS.md)**. Costituisce la vera "Source of Truth" tecnica del progetto AriaOS.

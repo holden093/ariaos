@@ -1,4 +1,4 @@
-name: Build NixitOS Image
+name: Build AriaOS Image
 on:
   pull_request:
     branches:
@@ -14,9 +14,9 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  IMAGE_DESC: "NixitOS (BlueBuild Edition) - Hybrid GPU Sysadmin OS"
-  IMAGE_KEYWORDS: "bootc,ublue,silverblue,nixitos,sysadmin,egpu"
-  IMAGE_NAME: "nixitos"
+  IMAGE_DESC: "AriaOS (BlueBuild Edition) - Hybrid GPU Sysadmin OS"
+  IMAGE_KEYWORDS: "bootc,ublue,silverblue,ariaos,sysadmin,egpu"
+  IMAGE_NAME: "ariaos"
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
   DEFAULT_TAG: "latest"
 

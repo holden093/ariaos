@@ -1,11 +1,11 @@
 ---
-name: nixitos-optimizer
-description: Specialized for optimizing NixitOS (a Fedora-based bootc image). It compares the codebase (Containerfile, build_files) with the current running environment to identify performance bottlenecks, redundant packages, and better configuration patterns. Use it to improve system efficiency and maintainability.
+name: ariaos-optimizer
+description: Specialized for optimizing AriaOS (a Fedora-based bootc image). It compares the codebase (Containerfile, build_files) with the current running environment to identify performance bottlenecks, redundant packages, and better configuration patterns. Use it to improve system efficiency and maintainability.
 ---
 
-# NixitOS Optimizer
+# AriaOS Optimizer
 
-This skill helps you refine the NixitOS codebase by comparing it with the active operating system and applying efficiency best practices for Fedora Silverblue/bootc images.
+This skill helps you refine the AriaOS codebase by comparing it with the active operating system and applying efficiency best practices for Fedora Silverblue/bootc images.
 
 ## Core Workflows
 

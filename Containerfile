@@ -11,7 +11,7 @@ FROM ghcr.io/blue-build/base-images/fedora-silverblue-nvidia:44
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     rsync -a /ctx/ / && \
-    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/backup /usr/bin/restore /usr/bin/nixitos-daw-launcher /usr/bin/aria && \
+    chmod +x /usr/bin/egpu-up.sh /usr/bin/egpu-down.sh /usr/bin/backup /usr/bin/restore /usr/bin/ariaos-daw-launcher /usr/bin/aria && \
     chmod 0440 /etc/sudoers.d/egpu /etc/sudoers.d/tuned
 
 # ==========================================
@@ -128,7 +128,7 @@ RUN --mount=type=cache,dst=/var/cache \
                    nvidia-persistenced.service && \
     # Rimuoviamo kargs di default di bluebuild che forzano il caricamento dei driver
     rm -f /usr/lib/bootc/kargs.d/bluebuild-kargs.toml && \
-    echo "NixitOS: NVIDIA is now on-demand only."
+    echo "AriaOS: NVIDIA is now on-demand only."
 
 # ==========================================
 # 2b. CHATBOT LOCALE (aria) — venv
@@ -142,18 +142,18 @@ RUN python3 -m venv --system-site-packages /usr/share/aria/venv && \
 # 3. BRANDING & IDENTITÀ
 # ==========================================
 
-RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="NixitOS (BlueBuild Edition)"/' /etc/os-release && \
-    sed -i 's/^NAME=.*/NAME="NixitOS"/' /etc/os-release && \
-    sed -i 's/^ID=fedora/ID=nixitos/' /etc/os-release && \
+RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="AriaOS (BlueBuild Edition)"/' /etc/os-release && \
+    sed -i 's/^NAME=.*/NAME="AriaOS"/' /etc/os-release && \
+    sed -i 's/^ID=fedora/ID=ariaos/' /etc/os-release && \
     sed -i 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release && \
-    sed -i 's|^HOME_URL=.*|HOME_URL="https://git.nixit.it/holden093/NixitOS"|' /etc/os-release
+    sed -i 's|^HOME_URL=.*|HOME_URL="https://github.com/holden093/airaos"|' /etc/os-release
 
 # ==========================================
 # 4. PLYMOUTH & INITRAMFS
 # ==========================================
 
-RUN cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/nixitos/ && \
-    plymouth-set-default-theme nixitos && \
+RUN cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/ariaos/ && \
+    plymouth-set-default-theme ariaos && \
     # Creiamo /var/roothome per evitare che dracut fallisca a causa di /root come symlink rotto nel container
     mkdir -p /var/roothome && \
     # Rigeneriamo l'initramfs ALLA FINE per applicare le esclusioni NVIDIA e TPM

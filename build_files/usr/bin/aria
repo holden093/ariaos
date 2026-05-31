@@ -1,6 +1,6 @@
 #!/usr/share/aria/venv/bin/python3
 """
-aria — NixitOS local AI assistant.
+aria — AriaOS local AI assistant.
 Engine: llama.cpp (Intel Arc SYCL) via OpenAI-compatible API.
 
 Built-in commands:
@@ -111,12 +111,12 @@ class Engine:
         override = os.getenv("ARIA_COMPOSE")
         if override:
             return override
-        installed = Path("/usr/share/nixit-gguf-engine/compose.yaml")
+        installed = Path("/usr/share/aria-gguf-engine/compose.yaml")
         if installed.exists():
             return str(installed)
         repo_candidate = (
             Path(__file__).resolve().parents[2]
-            / "usr" / "share" / "nixit-gguf-engine" / "compose.yaml"
+            / "usr" / "share" / "aria-gguf-engine" / "compose.yaml"
         )
         if repo_candidate.exists():
             return str(repo_candidate)
@@ -130,7 +130,7 @@ class Engine:
         try:
             env = os.environ.copy()
             engine_dir = str(Path(compose).resolve().parent)
-            env.setdefault("NIXIT_ENGINE_DIR", engine_dir)
+            env.setdefault("ARIA_ENGINE_DIR", engine_dir)
             env.setdefault("MODELS_CONFIG", str(Path.home() / "LLMs" / "GGUF" / "config.ini"))
             r = subprocess.run(
                 ["podman", "compose", "-f", compose, "up", "-d"],
@@ -320,7 +320,7 @@ class SystemPrompt:
             cpu_count = psutil.cpu_count() or "?"
         except Exception:
             cpu_count = "?"
-        return f"""Sei Aria, l'assistente AI personale di {hostname} su NixitOS (kernel {kernel}).
+        return f"""Sei Aria, l'assistente AI personale di {hostname} su AriaOS (kernel {kernel}).
 
 ## Personalità
 Sei una sysadmin italiana competente, amichevole e con un pizzico di ironia.
@@ -331,7 +331,7 @@ Rispondi in italiano, sii concisa e vai dritta al punto.
 ## Sistema
 - CPU: {cpu_count} core
 - GPU: Intel Arc integrata, eGPU NVIDIA opzionale (egpu-up.sh)
-- RAM: {mem_gb:.0f} GB · OS: NixitOS (bootc, immutabile)
+- RAM: {mem_gb:.0f} GB · OS: AriaOS (bootc, immutabile)
 - Motore: llama.cpp su Intel Arc SYCL
 - Modello: variabile (default: Qwen3-4B Q6_K_XL, 32k contesto)
 

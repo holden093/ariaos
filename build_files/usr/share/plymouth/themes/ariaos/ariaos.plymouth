@@ -1,10 +1,10 @@
 [Plymouth Theme]
-Name=NixitOS
-Description=Tema di avvio ufficiale per NixitOS (BlueBuild)
+Name=AriaOS
+Description=Tema di avvio ufficiale per AriaOS (BlueBuild)
 ModuleName=two-step
 
 [two-step]
-ImageDir=/usr/share/plymouth/themes/nixitos
+ImageDir=/usr/share/plymouth/themes/ariaos
 # Il modulo two-step cerca automaticamente watermark.png e bgrt-fallback.png
 HorizontalAlignment=.5
 VerticalAlignment=.7

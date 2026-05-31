@@ -42,7 +42,7 @@ while read -r name fstype size mountpoint; do
 done <<< "$partitions"
 
 # Mostra il menu
-TARGET_DEV=$(dialog --clear --title "NixitOS - Backup Home" \
+TARGET_DEV=$(dialog --clear --title "AriaOS - Backup Home" \
         --menu "Scegli la partizione di destinazione per il backup:" 15 70 6 \
         "${menu_options[@]}" \
         3>&1 1>&2 2>&3)
@@ -58,7 +58,7 @@ MOUNT_POINT=$(lsblk -rn -o MOUNTPOINT "$TARGET_DEV")
 TEMP_MOUNT=0
 
 if [ -z "$MOUNT_POINT" ]; then
-  MOUNT_POINT=$(mktemp -d /tmp/nixitos-backup-mnt.XXXXXX)
+  MOUNT_POINT=$(mktemp -d /tmp/ariaos-backup-mnt.XXXXXX)
   if ! mount "$TARGET_DEV" "$MOUNT_POINT"; then
     dialog --msgbox "Impossibile montare $TARGET_DEV." 8 50
     rm -rf "$MOUNT_POINT"
@@ -67,7 +67,7 @@ if [ -z "$MOUNT_POINT" ]; then
   TEMP_MOUNT=1
 fi
 
-BACKUP_FILE="$MOUNT_POINT/nixitos_home.btrfs.zst"
+BACKUP_FILE="$MOUNT_POINT/ariaos_home.btrfs.zst"
 
 if [ -f "$BACKUP_FILE" ]; then
   dialog --yesno "Il file $BACKUP_FILE esiste già.\nVuoi sovrascriverlo?" 8 60
@@ -95,15 +95,15 @@ fi
 ESTIMATED_SIZE=$(df --output=used -B1 /var/home | tail -1 | tr -d ' ')
 
 set -o pipefail
-if ! ( btrfs send /var/home-backup 2>/dev/null | pv -n -s "$ESTIMATED_SIZE" | zstd -T0 > "$BACKUP_FILE" ) 2>&1 | dialog --backtitle "NixitOS - Backup" --title "Esportazione in corso" --gauge "Compressione e salvataggio (Btrfs -> Zstd)...\nL'operazione può richiedere svariati minuti.\nDestinazione: $BACKUP_FILE" 10 70; then
-  dialog --backtitle "NixitOS - Backup" --title "Errore" --msgbox "Si è verificato un errore durante l'esportazione del backup." 8 50
+if ! ( btrfs send /var/home-backup 2>/dev/null | pv -n -s "$ESTIMATED_SIZE" | zstd -T0 > "$BACKUP_FILE" ) 2>&1 | dialog --backtitle "AriaOS - Backup" --title "Esportazione in corso" --gauge "Compressione e salvataggio (Btrfs -> Zstd)...\nL'operazione può richiedere svariati minuti.\nDestinazione: $BACKUP_FILE" 10 70; then
+  dialog --backtitle "AriaOS - Backup" --title "Errore" --msgbox "Si è verificato un errore durante l'esportazione del backup." 8 50
 else
-  dialog --backtitle "NixitOS - Backup" --title "Completato" --msgbox "Backup completato con successo!\nFile salvato in:\n$BACKUP_FILE" 8 60
+  dialog --backtitle "AriaOS - Backup" --title "Completato" --msgbox "Backup completato con successo!\nFile salvato in:\n$BACKUP_FILE" 8 60
 fi
 set +o pipefail
 
 # Pulizia
-dialog --backtitle "NixitOS - Backup" --infobox "Rimozione snapshot temporanea e pulizia..." 5 50
+dialog --backtitle "AriaOS - Backup" --infobox "Rimozione snapshot temporanea e pulizia..." 5 50
 btrfs subvolume delete /var/home-backup >/dev/null 2>&1
 
 if [ $TEMP_MOUNT -eq 1 ]; then

@@ -35,7 +35,7 @@ while read -r name fstype size mountpoint; do
   menu_options+=("/dev/$name" "$desc")
 done <<< "$partitions"
 
-TARGET_DEV=$(dialog --clear --title "NixitOS - Restore Home" \
+TARGET_DEV=$(dialog --clear --title "AriaOS - Restore Home" \
         --menu "Scegli la partizione contenente il backup:" 15 70 6 \
         "${menu_options[@]}" \
         3>&1 1>&2 2>&3)
@@ -51,7 +51,7 @@ MOUNT_POINT=$(lsblk -rn -o MOUNTPOINT "$TARGET_DEV")
 TEMP_MOUNT=0
 
 if [ -z "$MOUNT_POINT" ]; then
-  MOUNT_POINT=$(mktemp -d /tmp/nixitos-restore-mnt.XXXXXX)
+  MOUNT_POINT=$(mktemp -d /tmp/ariaos-restore-mnt.XXXXXX)
   if ! mount "$TARGET_DEV" "$MOUNT_POINT"; then
     dialog --msgbox "Impossibile montare $TARGET_DEV." 8 50
     rm -rf "$MOUNT_POINT"
@@ -60,7 +60,7 @@ if [ -z "$MOUNT_POINT" ]; then
   TEMP_MOUNT=1
 fi
 
-BACKUP_FILE="$MOUNT_POINT/nixitos_home.btrfs.zst"
+BACKUP_FILE="$MOUNT_POINT/ariaos_home.btrfs.zst"
 
 if [ ! -f "$BACKUP_FILE" ]; then
   dialog --msgbox "File di backup non trovato!\nNessun file in: $BACKUP_FILE" 8 60
@@ -83,14 +83,14 @@ btrfs subvolume delete /var/home-backup >/dev/null 2>&1 || true
 FILE_SIZE=$(stat -c%s "$BACKUP_FILE")
 
 set -o pipefail
-if ! ( pv -n -s "$FILE_SIZE" "$BACKUP_FILE" | zstdcat 2>/dev/null | btrfs receive /var/ >/dev/null 2>&1 ) 2>&1 | dialog --backtitle "NixitOS - Restore" --title "Importazione" --gauge "Decompressione e Ripristino (Zstd -> Btrfs)...\nSorgente: $BACKUP_FILE\nAttendere il completamento." 10 70; then
-  dialog --backtitle "NixitOS - Restore" --title "Errore" --msgbox "Si è verificato un errore durante l'importazione (btrfs receive fallito o stream interrotto)." 8 50
+if ! ( pv -n -s "$FILE_SIZE" "$BACKUP_FILE" | zstdcat 2>/dev/null | btrfs receive /var/ >/dev/null 2>&1 ) 2>&1 | dialog --backtitle "AriaOS - Restore" --title "Importazione" --gauge "Decompressione e Ripristino (Zstd -> Btrfs)...\nSorgente: $BACKUP_FILE\nAttendere il completamento." 10 70; then
+  dialog --backtitle "AriaOS - Restore" --title "Errore" --msgbox "Si è verificato un errore durante l'importazione (btrfs receive fallito o stream interrotto)." 8 50
   [ $TEMP_MOUNT -eq 1 ] && umount "$MOUNT_POINT" && rm -rf "$MOUNT_POINT"
   exit 1
 fi
 set +o pipefail
 
-dialog --backtitle "NixitOS - Restore" --infobox "Flusso ricevuto con successo. Preparazione della nuova home..." 5 60
+dialog --backtitle "AriaOS - Restore" --infobox "Flusso ricevuto con successo. Preparazione della nuova home..." 5 60
 
 # Swap della home
 # Evitiamo 'btrfs subvolume delete' perché fallisce (e fa crashare lo script per via del set -e) 
@@ -108,14 +108,14 @@ if [ -e /var/home ]; then
 else
   # Mv ha funzionato, la destinazione è libera. Facciamo uno snapshot RW pulito.
   if ! btrfs subvolume snapshot /var/home-backup /var/home >/dev/null 2>&1; then
-     dialog --backtitle "NixitOS - Restore" --title "Errore Critico" --msgbox "Impossibile rendere read-write la home. Il sistema potrebbe essere in uno stato inconsistente." 8 60
+     dialog --backtitle "AriaOS - Restore" --title "Errore Critico" --msgbox "Impossibile rendere read-write la home. Il sistema potrebbe essere in uno stato inconsistente." 8 60
      mv "$OLD_HOME" /var/home >/dev/null 2>&1 || true
      exit 1
   fi
 fi
 
 # Pulizia
-dialog --backtitle "NixitOS - Restore" --infobox "Pulizia in corso..." 5 50
+dialog --backtitle "AriaOS - Restore" --infobox "Pulizia in corso..." 5 50
 btrfs subvolume delete /var/home-backup >/dev/null 2>&1 || true
 
 if [ $TEMP_MOUNT -eq 1 ]; then
@@ -123,5 +123,5 @@ if [ $TEMP_MOUNT -eq 1 ]; then
   rm -rf "$MOUNT_POINT"
 fi
 
-dialog --backtitle "NixitOS - Restore" --title "Completato" --msgbox "Ripristino completato con successo!\n\nÈ necessario riavviare il sistema affinché tutte le applicazioni e i servizi leggano la nuova home." 10 60
+dialog --backtitle "AriaOS - Restore" --title "Completato" --msgbox "Ripristino completato con successo!\n\nÈ necessario riavviare il sistema affinché tutte le applicazioni e i servizi leggano la nuova home." 10 60
 clear
