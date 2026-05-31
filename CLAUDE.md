@@ -16,8 +16,8 @@ Non-standard: the Containerfile at repo root defines a bootc-compatible OS image
 - Activate NVIDIA eGPU (on-demand only): `sudo egpu-up.sh`
 - Deactivate NVIDIA eGPU: requires logout/reboot first, then `sudo egpu-down.sh`
 - Chat with local AI: `aria`
-- Export home backup: `sudo nixitos-home-backup`
-- Restore home backup on fresh install: `sudo nixitos-home-restore`
+- Export home backup: `sudo backup`
+- Restore home backup on fresh install: `sudo restore`
 
 ## Conventions
 

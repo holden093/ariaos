@@ -35,7 +35,7 @@ Per passare da un'installazione pulita di Fedora a NixitOS con tutti i dati:
    *(Attendi il completamento e riavvia il sistema).*
 3. **Ripristino della Home (TUI)**: Al riavvio, prima del login grafico, passa a una TTY (`Ctrl+Alt+F3`), collega il disco USB di backup e lancia:
    ```bash
-   sudo nixitos-home-restore
+   sudo restore
    ```
 4. **Abilita Audio a Bassa Latenza** (Obbligatorio per produzione audio):
    Affinché le ottimizzazioni in tempo reale e lo script `nixitos-daw-launcher` funzionino, devi aggiungere il tuo utente ai gruppi `realtime` e `audio`:
@@ -80,8 +80,8 @@ Gli script operativi sono installati in `/usr/bin/` e pronti all'uso:
 * **`egpu-up.sh`**: Attiva la eGPU NVIDIA caricando l'intero stack di driver (inclusi `nvidia_modeset` e `nvidia_drm`) e impostando permessi aperti (`0666`). Consente l'uso sia per inferenza AI che per rendering grafico (Wayland/GNOME).
 * **`egpu-down.sh`**: Rimuove i driver NVIDIA in modo pulito dal kernel. Poiché lo script di avvio carica anche i driver DRM, prima di eseguire questo script è necessario effettuare il LOG-OUT o riavviare per liberare la GPU dal display server.
 * **Pika Backup (Raccomandato)**: Questa è l'app ufficiale per i backup quotidiani, incrementali e navigabili. Poiché è profondamente integrata con GNOME, è un'eccezione alla regola "Niente Flatpak per app critiche" e va installata manualmente dall'utente via Flathub (`org.gnome.World.PikaBackup`). Perfetta per eseguire il backup sul NAS (SMB/SFTP) o dischi esterni in stile Time Machine.
-* **`nixitos-home-backup`**: Utility TUI legacy per il Disaster Recovery "Bare-Metal". Esporta la `/var/home` in un file monolitico zstd sfruttando `btrfs send`. Da usare per backup integrali offline su USB prima di formattare.
-* **`nixitos-home-restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup monolitico zstd su installazioni pulite.
+* **`backup`**: Utility TUI legacy per il Disaster Recovery "Bare-Metal". Esporta la `/var/home` in un file monolitico zstd sfruttando `btrfs send`. Da usare per backup integrali offline su USB prima di formattare.
+* **`restore`**: Utility TUI basata su `btrfs receive` per ripristinare il backup monolitico zstd su installazioni pulite.
 
 ## 🤖 AI Locale & Motore GGUF NixitOS
 
