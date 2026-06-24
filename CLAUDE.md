@@ -28,6 +28,9 @@ Non-standard: the Containerfile at repo root defines a bootc-compatible OS image
 - Flatpaks must never be used for critical system apps (backup tools, core utilities). Exception: Pika Backup is authorized as a Flatpak for GNOME integration.
 - Scripts in usr/bin use `set -euo pipefail` (bash) and are installed with `chmod +x` in the Containerfile.
 - Every change pushed to the repository (by human or AI) must first be tested with a local Podman build: `podman build -f Containerfile -t ariaos .`. Pushing without a passing local build is not allowed — the CI build failure from the stale script rename was the canonical example of why this rule exists.
+  - **Enforced by the `ariaos-preflight` skill** — use `/skill:ariaos-preflight` before every push to automatically build and verify.
+  - Run manually: `./.antigravity/skills/ariaos-preflight/scripts/preflight.sh`
+- FreeRDP (used by Remmina) is rebuilt with FFmpeg/x264 + VAAPI in a multi-stage build. The `freerdp-builder` stage isolates FFmpeg dependency resolution from the main image's rpm-ostree environment. Both `freerdp-libs` and `libwinpr` are replaced as a version-locked pair.
 
 ## Key Files
 
@@ -38,4 +41,4 @@ Non-standard: the Containerfile at repo root defines a bootc-compatible OS image
 - `$HOME/LLMs/GGUF/config.ini` — LLM router preset with model profiles, context window sizes, and hardware constraints. The compose bind-mounts it into the container at `/config/config.ini`. User-owned, survives OS updates.
 - `build_files/usr/share/aria-gguf-engine/compose.yaml` — Podman Compose definition for the llama.cpp inference container (uses upstream `ghcr.io/ggml-org/llama.cpp:server-intel` directly, all config in the compose).
 - `AGENTS.md` -- Technical architecture reference: hardware constraints, optimization rules, validation mandates, and the source of truth for AI agents working on the project.
-- `.github/workflows/build-image.yml` -- CI/CD pipeline: buildah build, GHCR push, daily rebuild schedule, PR preview builds.
+- `.antigravity/skills/ariaos-preflight/` — Pre-push build validator: runs `podman build` and blocks push on failure. Run before every commit that touches Containerfile or build_files/.
