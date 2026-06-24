@@ -105,6 +105,7 @@ RUN --mount=type=cache,dst=/var/cache \
     ckan \
     borgbackup \
     btrfsmaintenance \
+    ffmpeg-libs \
     # --- Audio & Low-Latency ---
     realtime-setup \
     tuned \
@@ -131,7 +132,29 @@ RUN --mount=type=cache,dst=/var/cache \
     echo "AriaOS: NVIDIA is now on-demand only."
 
 # ==========================================
-# 2b. CHATBOT LOCALE (aria) — venv
+# 2b. REBUILD FREERDP WITH FFMPEG/x264 + VAAPI
+# ==========================================
+
+# Replace the stock freerdp-libs (OpenH264) with a custom build linked
+# against FFmpeg's libavcodec/x264 and VAAPI for hardware H.264 encoding
+# on Intel Arc.  The --mount=cache keeps RPM downloads across builds.
+
+RUN --mount=type=cache,dst=/var/cache \
+    dnf install -y rpm-build ffmpeg-devel && \
+    dnf builddep --define '_with_ffmpeg 1' -y freerdp && \
+    dnf download --source freerdp && \
+    rpmbuild --rebuild \
+        --define '_with_ffmpeg 1' \
+        --define 'dist .ariaos' \
+        freerdp-*.src.rpm && \
+    rpm-ostree override replace \
+        /root/rpmbuild/RPMS/x86_64/freerdp-libs-*.rpm && \
+    rm -rf /root/rpmbuild freerdp-*.src.rpm && \
+    rpm-ostree cleanup -m && \
+    echo "AriaOS: FreeRDP rebuilt with FFmpeg/x264 + VAAPI H.264 encoding."
+
+# ==========================================
+# 2c. CHATBOT LOCALE (aria) — venv
 # ==========================================
 
 RUN python3 -m venv --system-site-packages /usr/share/aria/venv && \
