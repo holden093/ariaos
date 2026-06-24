@@ -2,6 +2,25 @@
 FROM scratch AS ctx
 COPY build_files /
 
+# ==========================================
+# STAGE: Rebuild FreeRDP with FFmpeg/x264 + VAAPI
+# ==========================================
+# Isolated from the main image to avoid libavcodec-free / ffmpeg-libs
+# conflicts between Fedora and RPM Fusion packages.
+
+FROM fedora:44 AS freerdp-builder
+RUN dnf install -y 'dnf-command(builddep)' rpm-build && \
+    dnf install -y \
+        https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-44.noarch.rpm && \
+    dnf install -y ffmpeg-devel && \
+    dnf builddep --define '_with_ffmpeg 1' -y freerdp && \
+    dnf download --source freerdp && \
+    rpmbuild --rebuild \
+        --define '_with_ffmpeg 1' \
+        --define 'dist .ariaos' \
+        freerdp-*.src.rpm && \
+    echo "AriaOS: FreeRDP RPMs built with FFmpeg/x264 + VAAPI."
+
 # L'immagine base pulita con i driver NVIDIA
 FROM ghcr.io/blue-build/base-images/fedora-silverblue-nvidia:44
 
@@ -105,7 +124,6 @@ RUN --mount=type=cache,dst=/var/cache \
     ckan \
     borgbackup \
     btrfsmaintenance \
-    ffmpeg-libs \
     # --- Audio & Low-Latency ---
     realtime-setup \
     tuned \
@@ -132,26 +150,20 @@ RUN --mount=type=cache,dst=/var/cache \
     echo "AriaOS: NVIDIA is now on-demand only."
 
 # ==========================================
-# 2b. REBUILD FREERDP WITH FFMPEG/x264 + VAAPI
+# 2b. OVERRIDE FREERDP WITH FFMPEG/x264 + VAAPI BUILD
 # ==========================================
 
-# Replace the stock freerdp-libs (OpenH264) with a custom build linked
-# against FFmpeg's libavcodec/x264 and VAAPI for hardware H.264 encoding
-# on Intel Arc.  The --mount=cache keeps RPM downloads across builds.
+# Copy all RPMs built in the isolated freerdp-builder stage and
+# replace the stock packages.  freerdp-libs and libwinpr are version-
+# locked (must match), and both are present in the base image.
 
-RUN --mount=type=cache,dst=/var/cache \
-    dnf install -y rpm-build ffmpeg-devel && \
-    dnf builddep --define '_with_ffmpeg 1' -y freerdp && \
-    dnf download --source freerdp && \
-    rpmbuild --rebuild \
-        --define '_with_ffmpeg 1' \
-        --define 'dist .ariaos' \
-        freerdp-*.src.rpm && \
-    rpm-ostree override replace \
-        /root/rpmbuild/RPMS/x86_64/freerdp-libs-*.rpm && \
-    rm -rf /root/rpmbuild freerdp-*.src.rpm && \
+COPY --from=freerdp-builder /root/rpmbuild/RPMS/x86_64/ /tmp/freerdp-rpms/
+RUN rpm-ostree override replace \
+        /tmp/freerdp-rpms/freerdp-libs-[0-9]*.rpm \
+        /tmp/freerdp-rpms/libwinpr-[0-9]*.rpm && \
+    rm -rf /tmp/freerdp-rpms && \
     rpm-ostree cleanup -m && \
-    echo "AriaOS: FreeRDP rebuilt with FFmpeg/x264 + VAAPI H.264 encoding."
+    echo "AriaOS: FreeRDP replaced with FFmpeg/x264 + VAAPI build."
 
 # ==========================================
 # 2c. CHATBOT LOCALE (aria) — venv
