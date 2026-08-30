@@ -25,8 +25,8 @@ if [[ $freerdp_version != *ariaos* ]]; then
   exit 1
 fi
 
-for package in intel-compute-runtime intel-level-zero nvidia-container-toolkit \
-  gcc-c++ cmake ninja-build vulkan-headers cuda-toolkit; do
+for package in intel-compute-runtime intel-level-zero \
+  gcc-c++ cmake ninja-build vulkan-headers; do
   if ! run_image rpm -q "$package" >/dev/null 2>&1; then
     echo "Required compute/container package is missing: $package" >&2
     exit 1
@@ -34,13 +34,23 @@ for package in intel-compute-runtime intel-level-zero nvidia-container-toolkit \
 done
 run_image cmake --version >/dev/null
 run_image ninja --version >/dev/null
-run_image /usr/local/cuda/bin/nvcc --version >/dev/null
-run_image test -s /etc/profile.d/cuda.sh
 
-if ! run_image rpm -q nvidia-driver >/dev/null 2>&1; then
-  echo "NVIDIA host driver must be present in the image." >&2
-  exit 1
-fi
+for package in sway sway-config-fedora sway-systemd sddm sddm-wayland-sway \
+  xdg-desktop-portal-wlr waybar foot rofi dunst swaylock swayidle kanshi Thunar; do
+  if ! run_image rpm -q "$package" >/dev/null 2>&1; then
+    echo "Required Sway desktop package is missing: $package" >&2
+    exit 1
+  fi
+done
+
+for package in nvidia-driver nvidia-kmod nvidia-kmod-common cuda-toolkit \
+  nvidia-container-toolkit gdm gnome-shell mutter gnome-session \
+  xdg-desktop-portal-gnome; do
+  if run_image rpm -q "$package" >/dev/null 2>&1; then
+    echo "Retired desktop/GPU package remains in the image: $package" >&2
+    exit 1
+  fi
+done
 
 run_image kubectl version --client >/dev/null
 run_image helm version --short >/dev/null
@@ -65,29 +75,23 @@ for removed_path in \
   /usr/lib/bootc/kargs.d/ariaos-vfio.toml \
   /usr/lib/udev/rules.d/69-ariaos-vfio.rules \
   /etc/dracut.conf.d/ariaos-vfio.conf \
-  /usr/lib/bootc/kargs.d/bluebuild-kargs.toml; do
+  /usr/lib/bootc/kargs.d/bluebuild-kargs.toml \
+  /usr/libexec/ariaos-egpu \
+  /usr/lib/systemd/system/ariaos-egpu.service \
+  /usr/share/polkit-1/rules.d/50-ariaos-egpu.rules \
+  /etc/yum.repos.d/cuda-fedora.repo \
+  /etc/yum.repos.d/nvidia-container-toolkit.repo \
+  /etc/profile.d/cuda.sh \
+  /etc/dracut.conf.d/ariaos-nvidia.conf \
+  /etc/modprobe.d/blacklist-nvidia.conf \
+  /usr/lib/bootc/kargs.d/ariaos-blacklist.toml \
+  /usr/local/cuda; do
   if run_image test -e "$removed_path"; then
     echo "Removed path remains in image: $removed_path" >&2
     exit 1
   fi
 done
 
-for module in nvidia_drm nvidia_modeset nouveau; do
-  run_image grep -Fqx "install $module /bin/false" /etc/modprobe.d/blacklist-nvidia.conf
-done
-for module in nvidia nvidia_uvm; do
-  if run_image grep -Fqx "install $module /bin/false" /etc/modprobe.d/blacklist-nvidia.conf; then
-    echo "Compute module $module must stay on-demand, not hard-blocked." >&2
-    exit 1
-  fi
-done
-
-run_image grep -Fq 'nvidia-drm.modeset=0' /usr/lib/bootc/kargs.d/ariaos-blacklist.toml
-
-if ! run_image test -x /usr/libexec/ariaos-egpu; then
-  echo "ariaos-egpu helper missing or not executable." >&2
-  exit 1
-fi
 if ! run_image test -x /usr/libexec/ariaos-swapfile; then
   echo "ariaos-swapfile helper missing or not executable." >&2
   exit 1
@@ -96,23 +100,14 @@ fi
 # Swap su disco: zRAM deve restare disattivato per non sottrarre RAM alle inferenze.
 run_image grep -Fqx 'zram-size = 0' /etc/systemd/zram-generator.conf
 run_image grep -Fqx 'What=/var/swapfile' /usr/lib/systemd/system/var-swapfile.swap
-for path in \
-  /usr/lib/systemd/system/ariaos-egpu.service \
-  /usr/share/polkit-1/rules.d/50-ariaos-egpu.rules; do
-  if ! run_image test -e "$path"; then
-    echo "Required AriaOS GPU path missing: $path" >&2
-    exit 1
-  fi
-done
+run_image test -s /usr/share/wayland-sessions/sway.desktop
 
 for unit in podman.socket virtqemud.socket tuned.service btrfs-scrub.timer btrfs-balance.timer \
   ariaos-swapfile.service var-swapfile.swap; do
   assert_unit_state "$unit" enabled
 done
 assert_unit_state ModemManager.service masked
-assert_unit_state ariaos-egpu.service disabled
-assert_unit_state nvidia-cdi-refresh.service masked
-assert_unit_state nvidia-cdi-refresh.path masked
+assert_unit_state sddm.service enabled
 
 mode=$(run_image stat -c '%a' /etc/sudoers.d/tuned)
 if [[ $mode != 440 ]]; then

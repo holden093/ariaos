@@ -6,11 +6,15 @@ if rg -n 'rpm-ostree (install|override|cleanup)' Containerfile scripts/build; th
   exit 1
 fi
 
+if ! grep -Fq 'FROM quay.io/fedora/fedora-sway-atomic:44' Containerfile; then
+  echo "Containerfile must use the Fedora Sway Atomic 44 base." >&2
+  exit 1
+fi
+
 for helper in \
   install-packages.sh \
   install-kubernetes-tools.sh \
-  configure-services.sh \
-  configure-nvidia-policy.sh; do
+  configure-services.sh; do
   if ! rg -q "scripts/build/$helper" Containerfile; then
     echo "Containerfile does not invoke required build module: $helper" >&2
     exit 1

@@ -25,9 +25,8 @@ RUN dnf install -y 'dnf-command(builddep)' rpm-build && \
         freerdp-*.src.rpm && \
     echo "AriaOS: FreeRDP RPMs built with FFmpeg/x264 + VAAPI."
 
-# Immagine base con driver NVIDIA (compute-only): la policy display-off viene
-# applicata da configure-nvidia-policy.sh prima della rigenerazione dell'initramfs.
-FROM ghcr.io/blue-build/base-images/fedora-silverblue-nvidia:44
+# Fedora Sway Atomic provides the complete, distribution-supported desktop.
+FROM quay.io/fedora/fedora-sway-atomic:44
 
 # ==========================================
 # 1. COPIA FILE CUSTOM E PERMESSI
@@ -45,7 +44,7 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
           /usr/lib/bootc/kargs.d/ariaos-vfio.toml \
           /usr/lib/udev/rules.d/69-ariaos-vfio.rules \
           /etc/dracut.conf.d/ariaos-vfio.conf && \
-    chmod +x /usr/libexec/ariaos-egpu /usr/libexec/ariaos-swapfile /usr/bin/backup /usr/bin/restore /usr/bin/ariaos-daw-launcher && \
+    chmod +x /usr/libexec/ariaos-swapfile /usr/bin/backup /usr/bin/restore /usr/bin/ariaos-daw-launcher && \
     chmod 0440 /etc/sudoers.d/tuned
 
 RUN visudo -cf /etc/sudoers.d/tuned
@@ -64,9 +63,6 @@ RUN --mount=type=bind,from=build-tools,source=/,target=/ariaos-build \
 RUN --mount=type=bind,from=build-tools,source=/,target=/ariaos-build \
     bash /ariaos-build/scripts/build/install-kubernetes-tools.sh \
         /ariaos-build/versions/external-tools.env
-
-RUN --mount=type=bind,from=build-tools,source=/,target=/ariaos-build \
-    bash /ariaos-build/scripts/build/configure-nvidia-policy.sh
 
 # ==========================================
 # 2b. OVERRIDE FREERDP WITH FFMPEG/x264 + VAAPI BUILD
@@ -88,7 +84,7 @@ RUN dnf5 install -y --allowerasing --allow-downgrade \
 # 3. BRANDING & IDENTITÀ
 # ==========================================
 
-RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="AriaOS (BlueBuild Edition)"/' /etc/os-release && \
+RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="AriaOS (Sway Atomic)"/' /etc/os-release && \
     sed -i 's/^NAME=.*/NAME="AriaOS"/' /etc/os-release && \
     sed -i 's/^ID=fedora/ID=ariaos/' /etc/os-release && \
     sed -i 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release && \
@@ -102,8 +98,7 @@ RUN cp -n /usr/share/plymouth/themes/spinner/*.png /usr/share/plymouth/themes/ar
     plymouth-set-default-theme ariaos && \
     # Creiamo /var/roothome per evitare che dracut fallisca a causa di /root come symlink rotto nel container
     mkdir -p /var/roothome && \
-    # Rigeneriamo l'initramfs ALLA FINE per applicare la policy NVIDIA
-    # display-off, le esclusioni dei moduli di calcolo e il TPM
+    # Rigeneriamo l'initramfs alla fine per includere i moduli TPM dichiarativi.
     dracut -f --regenerate-all
 
 # ==========================================

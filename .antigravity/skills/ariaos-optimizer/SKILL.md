@@ -5,7 +5,7 @@ description: Specialized for optimizing AriaOS (a Fedora-based bootc image). It 
 
 # AriaOS Optimizer
 
-This skill helps you refine the AriaOS codebase by comparing it with the active operating system and applying efficiency best practices for Fedora Silverblue/bootc images.
+This skill helps you refine the AriaOS codebase by comparing it with the active operating system and applying efficiency best practices for Fedora Sway Atomic/bootc images.
 
 ## Core Workflows
 
@@ -21,8 +21,8 @@ This skill helps you refine the AriaOS codebase by comparing it with the active 
 
 ### 3. Performance Tuning
 - Suggest `sysctl` tweaks based on hardware (e.g., VM workload, SSD optimization).
-- Review `blacklist-nvidia.conf`, the boot kargs (`ariaos-blacklist.toml`), and `configure-nvidia-policy.sh` to confirm the eGPU stays compute-only and on-demand, never on the display path.
-- Check the on-demand eGPU footprint (`ariaos-egpu.service`, module load/unload, CDI spec) instead of driver loading speed.
+- Confirm the image keeps Fedora's Sway stack intact and does not add a proprietary GPU stack.
+- Check Intel Arc display and compute readiness without introducing model engines or host-side inference services.
 
 ### 4. Hardware-Specific Refinements
 - Use `lshw`, `lspci`, and `lsusb` to detect hardware and suggest missing drivers or firmware in the `Containerfile`.

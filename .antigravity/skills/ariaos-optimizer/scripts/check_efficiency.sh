@@ -17,11 +17,9 @@ rpm -qa --queryformat '%{SIZE} %{NAME}\n' | sort -rn | head -10 | awk '{print $2
 echo -e "\n--- 3. Active Services (Systemd) ---"
 systemctl list-units --type=service --state=running --no-pager | head -n 20
 
-echo -e "\n--- 4. Hardware Detection (eGPU & Intel Arc) ---"
-echo "NVIDIA Devices:"
-lspci | grep -i nvidia || echo "None detected."
-echo "Intel Graphics/Compute Devices:"
-lspci | grep -i vga | grep -i intel || echo "None detected."
+echo -e "\n--- 4. Intel Arc Hardware Detection ---"
+echo "Intel display devices:"
+lspci | grep -Ei 'vga|display' | grep -i intel || echo "None detected."
 
 echo -e "\n--- 5. Boot Time Performance ---"
 if command -v systemd-analyze &> /dev/null; then

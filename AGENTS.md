@@ -4,7 +4,7 @@ This file defines the non-negotiable engineering rules for changes to AriaOS. Us
 
 ## 1. System model
 
-- AriaOS is a Fedora Silverblue 44 derivative built with `bootc` and `blue-build` for one specific machine.
+- AriaOS is a Fedora Sway Atomic 44 derivative built with `bootc` for one specific machine.
 - The deployed OS is immutable. Persistent system changes must be represented in this repository.
 - Use `dnf5` during container builds. Do not use build-time `rpm-ostree install`, `override`, or `cleanup` commands.
 - Never recommend live `dnf` or `rpm-ostree install` as a persistent solution. Temporary diagnostics must be identified explicitly as temporary.
@@ -21,7 +21,7 @@ This file defines the non-negotiable engineering rules for changes to AriaOS. Us
 | `scripts/validate/` | Static checks and reusable image contract |
 | `tests/` | Isolated, non-destructive operational tests |
 
-Build helpers must not remain in the final image. Keep separate cache boundaries for package installation, service configuration, NVIDIA policy, and external tools. Update versions and checksums together. The host image must stay free of model engines and llama.cpp binaries.
+Build helpers must not remain in the final image. Keep separate cache boundaries for package installation, service configuration, and external tools. Update versions and checksums together. The host image must stay free of model engines and llama.cpp binaries.
 
 Every structural or behavioral change must update both this contract and `README.md` when it affects users.
 
@@ -29,20 +29,10 @@ Every structural or behavioral change must update both this contract and `README
 
 ### Intel Arc
 
-- Intel Arc Lunar Lake is the primary GPU.
+- Intel Arc Lunar Lake is the only supported GPU and uses the kernel `xe` driver.
 - Keep `intel-compute-runtime` and `intel-level-zero` in the base image.
 - OpenCL/Level Zero readiness does not authorize adding a model engine, model storage, chatbot, or local-model service.
-
-### NVIDIA eGPU (compute-only, on-demand)
-
-- The NVIDIA driver exists in the image (base `fedora-silverblue-nvidia`) but is **compute-only**: only the `nvidia` and `nvidia_uvm` modules are loaded, on demand, exclusively by `ariaos-egpu.service`.
-- The display path must stay permanently unloadable and unloaded: `/etc/modprobe.d/blacklist-nvidia.conf` keeps hard `install <module> /bin/false` rules for `nvidia_drm`, `nvidia_modeset`, and `nouveau`. Do not replace them with `alias <module> off`. Without `nvidia_drm` there is no DRM node, so GNOME cannot enumerate the eGPU.
-- `nvidia` and `nvidia_uvm` must remain **on-demand**: plain `blacklist` (no autoload), never `install /bin/false`, so explicit `modprobe` from the service works.
-- The boot kargs keep `nvidia-drm.modeset=0`; `rd.driver.blacklist` and `modprobe.blacklist` cover `nvidia_drm,nvidia_modeset,nouveau` only.
-- `ariaos-egpu.service` is the only privileged NVIDIA entry point, gated by a polkit rule for the `wheel` group on that single unit. It loads the compute modules, creates the device nodes, generates the runtime CDI spec in `/run/cdi`, and on stop kills clients, unloads the modules, and removes the PCI devices so the Thunderbolt cable can be unplugged.
-- `nvidia-suspend/resume/hibernate`, `nvidia-powerd`, `nvidia-persistenced`, and `nvidia-cdi-refresh` (service and path) stay masked; the base image's autoload files (`/usr/lib/modprobe.d/nvidia*.conf`, `/usr/lib/bootc/kargs.d/bluebuild-kargs.toml`, NVIDIA udev rules) are removed at build time by `configure-nvidia-policy.sh`, before the final initramfs regeneration. Masking the CDI refresh keeps the driver from being modprobed at boot: the runtime CDI spec is generated exclusively by `ariaos-egpu up` in `/run/cdi`.
-- Cold-unplug only: stop `ariaos-egpu.service` (which also removes the PCI devices) before disconnecting. Never unplug while the driver is bound.
-- Intel Arc is always the desktop GPU: no NVIDIA module may ever bind at boot, and no NVIDIA path may drive the display.
+- The host image must not add the proprietary NVIDIA driver, CUDA, CDI tooling, or custom eGPU policy. Fedora's generic firmware and default hardware behavior remain unchanged.
 - Do not replace Fedora's kernel with a third-party realtime kernel.
 
 ## 4. Resource and storage invariants
@@ -64,7 +54,13 @@ Every structural or behavioral change must update both this contract and `README
 - Force the `crypt` and `tpm2-tss` dracut modules because image builds have no TPM device.
 - Standard TPM enrollment uses PCR 7 and may optionally include PCR 0.
 - Do not recommend PCR 8 or 9: bootc kernel and initramfs updates would invalidate those measurements.
-- NVIDIA display-off policy and TPM modules must be applied before the final initramfs regeneration.
+- TPM modules must be applied before the final initramfs regeneration.
+
+### Desktop
+
+- Fedora Sway Atomic supplies Sway, SDDM, Waybar, Foot, Rofi, Dunst, Swaylock, Swayidle, Kanshi, Thunar, and `xdg-desktop-portal-wlr`.
+- Sway is the sole graphical session and SDDM is the display manager. GNOME Shell, Mutter, GDM, GNOME sessions, and `xdg-desktop-portal-gnome` must remain absent.
+- Start with Fedora's supported Sway configuration. Add declarative overrides only for demonstrated hardware or workflow needs.
 
 ## 6. Operational components
 
@@ -90,10 +86,8 @@ Every structural or behavioral change must update both this contract and `README
 
 ### GPU toolchain
 
-- The host image contains the CMake/Ninja/C++ toolchain, Vulkan headers and the CUDA toolkit so users can compile llama.cpp themselves in `/var/home`.
+- The host image contains the CMake/Ninja/C++ toolchain and Vulkan headers so users can compile llama.cpp themselves in `/var/home`.
 - The host image must not contain llama.cpp binaries, model engines, model storage, launchers, or toolbox-specific configuration.
-- `ariaos-egpu.service` is the manual privileged entry point for the compute-only NVIDIA eGPU. It loads `nvidia` and `nvidia_uvm`, creates device nodes, and generates CDI for optional GPU containers.
-- `nvidia-container-toolkit` remains installed for CDI-enabled Podman containers. Any change to the driver/module policy must update `configure-nvidia-policy.sh`, the blacklist/kargs files, and the operational tests together.
 
 ## 7. Empirical workflow
 
@@ -111,8 +105,8 @@ If a build or command waits for an approval prompt and times out, stop. Do not i
 
 - Bash syntax and ShellCheck when available;
 - sudoers parsing;
-- policy scans for personal paths, retired model components in the host image, legacy build mutations, and the NVIDIA display-off/on-demand policy;
-- isolated operational tests for backup cleanup, restore rejection and rollback, DAW profile restoration, and ariaos-egpu sequencing;
+- policy scans for personal paths, retired model components, proprietary GPU components, and legacy build mutations;
+- isolated operational tests for backup cleanup, restore rejection and rollback, and DAW profile restoration;
 - `git diff --check`.
 
 After changes to `Containerfile`, `build_files/`, `scripts/build/`, or external versions, `./scripts/preflight.sh` must also pass. It performs the full Podman build and runs `scripts/validate/image.sh`, which verifies:
@@ -123,7 +117,7 @@ After changes to `Containerfile`, `build_files/`, `scripts/build/`, or external 
 - required enabled and masked units;
 - sudoers modes;
 - sysusers/tmpfiles consistency;
-- NVIDIA presence and display-off/on-demand policy;
+- the Fedora Sway desktop contract and absence of the proprietary NVIDIA/CUDA stack;
 - absence of retired local-model, VFIO/VM, and build-only paths.
 
 GitHub Actions must run the same image contract after its Buildah build.

@@ -17,7 +17,7 @@ case "$command_name" in
       "receive /var/") cat >/dev/null; [[ ${ARIAOS_TEST_SCENARIO:-} != restore_invalid ]] ;;
     esac
     ;;
-  clear|mount|umount|mountpoint|nvidia-modprobe|udevadm|sleep|kill)
+  clear|mount|umount|mountpoint)
     exit 0
     ;;
   curl)
@@ -48,40 +48,6 @@ case "$command_name" in
       printf 'sdz1 ext4 %s 64G\n' "${ARIAOS_TEST_MOUNT:?}"
     fi
     ;;
-  lsmod)
-    cat "${ARIAOS_TEST_STATE:?}/modules" 2>/dev/null || true
-    ;;
-  lsof)
-    if [[ -n ${ARIAOS_TEST_LSOF_PIDS:-} ]]; then
-      printf '%s\n' "$ARIAOS_TEST_LSOF_PIDS"
-    fi
-    ;;
-  lspci)
-    case " $* " in
-      *" 10de:2504 "*) printf '0000:06:00.0 VGA compatible controller: NVIDIA test GPU\n' ;;
-      *" 10de:228e "*) printf '0000:06:00.1 Audio device: NVIDIA test audio\n' ;;
-      *) exit 0 ;;
-    esac
-    ;;
-  modprobe)
-    case " ${1:-} ${2:-} " in
-      " -r nvidia_uvm ")
-        sed -i '/^nvidia_uvm$/d' "${ARIAOS_TEST_STATE:?}/modules"
-        ;;
-      " -r nvidia ")
-        if [[ ${ARIAOS_TEST_SCENARIO:-} != egpu_no_unload ]]; then
-          sed -i '/^nvidia$/d' "${ARIAOS_TEST_STATE:?}/modules"
-        fi
-        ;;
-      *)
-        if [[ ${1:-} == -r ]]; then
-          exit 0
-        fi
-        grep -qx "$1" "${ARIAOS_TEST_STATE:?}/modules" 2>/dev/null || \
-          echo "$1" >> "${ARIAOS_TEST_STATE:?}/modules"
-        ;;
-    esac
-    ;;
   mv)
     if [[ ${ARIAOS_TEST_SCENARIO:-} == restore_rollback && ${2:-} == /var/home ]]; then
       marker=${ARIAOS_TEST_STATE:?}/activation-attempted
@@ -91,12 +57,6 @@ case "$command_name" in
       fi
     fi
     exit 0
-    ;;
-  nvidia-ctk)
-    exit 0
-    ;;
-  nvidia-smi)
-    printf 'GPU 0: Test NVIDIA GPU\n'
     ;;
   pv)
     for argument in "$@"; do
@@ -112,19 +72,6 @@ case "$command_name" in
     ;;
   sudo)
     "$@"
-    ;;
-  systemctl)
-    case " $* " in
-      *" is-active ariaos-egpu.service "*)
-        [[ -e ${ARIAOS_TEST_STATE:?}/egpu-active ]]
-        ;;
-      *" start ariaos-egpu.service "*)
-        : > "${ARIAOS_TEST_STATE:?}/egpu-active"
-        ;;
-      *" stop ariaos-egpu.service "*)
-        rm -f "${ARIAOS_TEST_STATE:?}/egpu-active"
-        ;;
-    esac
     ;;
   tuned-adm)
     if [[ ${1:-} == active ]]; then

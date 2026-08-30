@@ -20,7 +20,7 @@ if [[ -n $removed_model_matches ]]; then
 fi
 
 # Nessun motore di inferenza deve essere installato o costruito nell'immagine:
-# l'host fornisce driver, CDI e toolchain; i server vivono in /var/home o in container scelti dall'utente.
+# l'host fornisce la toolchain Vulkan; i server vivono in /var/home o in container scelti dall'utente.
 if rg -n -i 'install.*\bllama\b|\bgit clone.*llama|copy.*\bllama-server' \
     scripts/build Containerfile; then
   echo "LLM engine installation found in the build definition." >&2
@@ -31,8 +31,9 @@ if rg -n '(usr/(s)?bin/|usr/libexec/)(llama|llama-server|llama-cli)' build_files
   exit 1
 fi
 
-if rg -n 'egpu-up|egpu-down' "${image_sources[@]}" tests; then
-  echo "Retired on-demand NVIDIA component still referenced." >&2
+if rg -n -i 'nvidia|nouveau|cuda|ariaos-egpu|nvidia-container-toolkit|\bcdi\b' \
+    "${image_sources[@]}"; then
+  echo "NVIDIA/CUDA component found in the Intel-only image definition." >&2
   exit 1
 fi
 
@@ -44,43 +45,6 @@ if ! rg -q 'rm -f /usr/bin/llama-vm' Containerfile; then
   echo "Containerfile must remove the retired llama-vm binary." >&2
   exit 1
 fi
-
-readonly blacklist=build_files/etc/modprobe.d/blacklist-nvidia.conf
-for module in nvidia_drm nvidia_modeset nouveau; do
-  if ! grep -Fqx "install $module /bin/false" "$blacklist"; then
-    echo "Invalid permanent display-off policy for module: $module" >&2
-    exit 1
-  fi
-done
-for module in nvidia nvidia_uvm; do
-  if grep -Fqx "install $module /bin/false" "$blacklist"; then
-    echo "Compute module $module must stay on-demand, not hard-blocked." >&2
-    exit 1
-  fi
-done
-
-readonly blacklist_kargs=build_files/usr/lib/bootc/kargs.d/ariaos-blacklist.toml
-if ! grep -Fq 'nvidia-drm.modeset=0' "$blacklist_kargs"; then
-  echo "Missing nvidia-drm.modeset=0 karg in $blacklist_kargs." >&2
-  exit 1
-fi
-if grep -Fq 'vfio-pci.ids' "$blacklist_kargs"; then
-  echo "VFIO kargs must not survive: vfio-pci.ids found." >&2
-  exit 1
-fi
-
-for required in \
-  build_files/usr/libexec/ariaos-egpu \
-  build_files/usr/lib/systemd/system/ariaos-egpu.service \
-  build_files/usr/share/polkit-1/rules.d/50-ariaos-egpu.rules \
-  build_files/etc/yum.repos.d/nvidia-container-toolkit.repo \
-  build_files/etc/yum.repos.d/cuda-fedora.repo \
-  build_files/etc/dracut.conf.d/ariaos-nvidia.conf; do
-  if [[ ! -e $required ]]; then
-    echo "Required AriaOS GPU path missing: $required" >&2
-    exit 1
-  fi
-done
 
 if [[ -e build_files/usr/lib/udev/rules.d/69-ariaos-vfio.rules ]]; then
   echo "Retired VFIO udev rule still present." >&2
