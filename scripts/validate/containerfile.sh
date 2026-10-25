@@ -6,8 +6,8 @@ if rg -n 'rpm-ostree (install|override|cleanup)' Containerfile scripts/build; th
   exit 1
 fi
 
-if ! grep -Fq 'FROM quay.io/fedora/fedora-sway-atomic:44' Containerfile; then
-  echo "Containerfile must use the Fedora Sway Atomic 44 base." >&2
+if ! grep -Fq 'FROM quay.io/fedora/fedora-silverblue:44' Containerfile; then
+  echo "Containerfile must use the Fedora Silverblue 44 base." >&2
   exit 1
 fi
 

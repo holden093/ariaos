@@ -56,6 +56,9 @@ readonly packages=(
   bash-completion
 
   # Desktop and user applications
+  yaru-theme
+  gnome-tweaks
+  gnome-shell-extension-user-theme
   loupe
   evince
   remmina

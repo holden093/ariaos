@@ -1,6 +1,6 @@
 # AriaOS
 
-AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fedora Sway Atomic 44 e `bootc`.
+AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fedora Silverblue 44 e `bootc`.
 
 > [!WARNING]
 > Questa immagine è progettata per uno specifico laptop Intel Lunar Lake. Non è una distribuzione generica e può essere inadatta su hardware diverso.
@@ -9,7 +9,7 @@ AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fe
 
 - Sistema riproducibile: ogni modifica persistente vive nel repository.
 - Base nativa essenziale, con Flatpak e Distrobox per applicazioni non critiche.
-- Sway e Intel Arc come unico stack desktop e GPU previsto.
+- GNOME e Intel Arc come unico stack desktop e GPU previsto.
 - Calcolo locale tramite Vulkan, OpenCL e Level Zero, senza motori preinstallati.
 - Backup giornalieri e ripristino bare-metal indipendenti.
 - Buona autonomia nell'uso normale e tuning dinamico per sessioni audio.
@@ -18,8 +18,8 @@ AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fe
 
 | Area | Configurazione |
 |---|---|
-| Base | Fedora Sway Atomic 44, `bootc` |
-| Desktop | Sway con configurazione Fedora |
+| Base | Fedora Silverblue 44, `bootc` |
+| Desktop | GNOME Wayland con tema Yaru |
 | GPU primaria | Intel Arc Lunar Lake (display + Vulkan) |
 | Calcolo GPU | Intel Arc (Vulkan, OpenCL e Level Zero) |
 | Storage | Btrfs con compressione `zstd:1` |
@@ -30,7 +30,7 @@ AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fe
 
 ### GPU e calcolo
 
-Intel Arc dispone di `intel-compute-runtime`, `intel-level-zero`, OpenCL e strumenti Vulkan per desktop, media e calcolo, senza alcun motore LLM host-side. La sessione usa Sway, SDDM e `xdg-desktop-portal-wlr` forniti direttamente da Fedora.
+Intel Arc dispone di `intel-compute-runtime`, `intel-level-zero`, OpenCL e strumenti Vulkan per desktop, media e calcolo, senza alcun motore LLM host-side. La sessione usa GNOME Wayland, GDM e `xdg-desktop-portal-gnome` forniti direttamente da Fedora.
 
 ### Toolchain GPU e llama.cpp
 
@@ -80,7 +80,7 @@ Node.js 24 LTS (con `npm`, `npx` e `corepack`) viene installato dal tarball uffi
 
 ## Installazione
 
-Partendo da un sistema Fedora Atomic installato con Btrfs e LUKS2:
+Partendo da Fedora Silverblue installata con Btrfs e LUKS2:
 
 ```bash
 sudo bootc switch ghcr.io/holden093/ariaos:latest
@@ -136,7 +136,7 @@ Il preflight:
 
 1. esegue controlli statici e test operativi non distruttivi;
 2. costruisce l'intera immagine con Podman;
-3. verifica pacchetti, sessione Sway, strumenti, completamenti, servizi e permessi;
+3. verifica pacchetti, sessione GNOME, strumenti, completamenti, servizi e permessi;
 4. conferma che componenti ritirati e file di build non siano presenti.
 
 GitHub Actions applica lo stesso contratto `scripts/validate/image.sh` all'immagine costruita.

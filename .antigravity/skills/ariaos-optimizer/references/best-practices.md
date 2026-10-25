@@ -1,12 +1,12 @@
 # AriaOS Best Practices
 
-## Fedora Sway Atomic & bootc
+## Fedora Silverblue & bootc
 - **Minimalism**: Only include packages in the base image that are essential for the system to boot and provide core functionality. Use Flatpaks or Distroboxes for user applications.
 - **GitOps Flow**: Every change should be reflected in the `Containerfile`. Avoid manual `rpm-ostree install` on the running system except for testing.
 - **Clean Layers**: Use `dnf5` during bootc container builds and run `dnf5 clean all` after installs to keep image size down.
 
 ## Intel graphics
-- Keep Fedora's Sway, wlroots portal, and SDDM integration intact.
+- Keep Fedora's GNOME Shell, GNOME portal, and GDM integration intact.
 - Keep Intel Arc compute support focused on Vulkan, OpenCL, and Level Zero.
 - Do not add proprietary GPU drivers, CUDA, CDI tooling, or custom eGPU policy.
 

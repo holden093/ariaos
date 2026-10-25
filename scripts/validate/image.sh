@@ -35,17 +35,16 @@ done
 run_image cmake --version >/dev/null
 run_image ninja --version >/dev/null
 
-for package in sway sway-config-fedora sway-systemd sddm sddm-wayland-sway \
-  xdg-desktop-portal-wlr waybar foot rofi dunst swaylock swayidle kanshi Thunar; do
+for package in gnome-shell mutter gdm gnome-session-wayland-session \
+  xdg-desktop-portal-gnome yaru-theme gnome-tweaks gnome-shell-extension-user-theme; do
   if ! run_image rpm -q "$package" >/dev/null 2>&1; then
-    echo "Required Sway desktop package is missing: $package" >&2
+    echo "Required GNOME desktop package is missing: $package" >&2
     exit 1
   fi
 done
 
 for package in nvidia-driver nvidia-kmod nvidia-kmod-common cuda-toolkit \
-  nvidia-container-toolkit gdm gnome-shell mutter gnome-session \
-  xdg-desktop-portal-gnome; do
+  nvidia-container-toolkit sway sddm; do
   if run_image rpm -q "$package" >/dev/null 2>&1; then
     echo "Retired desktop/GPU package remains in the image: $package" >&2
     exit 1
@@ -113,14 +112,14 @@ fi
 # Swap su disco: zRAM deve restare disattivato per non sottrarre RAM alle inferenze.
 run_image grep -Fqx 'zram-size = 0' /etc/systemd/zram-generator.conf
 run_image grep -Fqx 'What=/var/swapfile' /usr/lib/systemd/system/var-swapfile.swap
-run_image test -s /usr/share/wayland-sessions/sway.desktop
+run_image test -s /usr/share/wayland-sessions/gnome.desktop
 
 for unit in podman.socket virtqemud.socket tuned.service btrfs-scrub.timer btrfs-balance.timer \
   ariaos-swapfile.service var-swapfile.swap; do
   assert_unit_state "$unit" enabled
 done
 assert_unit_state ModemManager.service masked
-assert_unit_state sddm.service enabled
+assert_unit_state gdm.service enabled
 
 mode=$(run_image stat -c '%a' /etc/sudoers.d/tuned)
 if [[ $mode != 440 ]]; then

@@ -4,7 +4,7 @@ This file defines the non-negotiable engineering rules for changes to AriaOS. Us
 
 ## 1. System model
 
-- AriaOS is a Fedora Sway Atomic 44 derivative built with `bootc` for one specific machine.
+- AriaOS is a Fedora Silverblue 44 derivative built with `bootc` for one specific machine.
 - The deployed OS is immutable. Persistent system changes must be represented in this repository.
 - Use `dnf5` during container builds. Do not use build-time `rpm-ostree install`, `override`, or `cleanup` commands.
 - Never recommend live `dnf` or `rpm-ostree install` as a persistent solution. Temporary diagnostics must be identified explicitly as temporary.
@@ -58,9 +58,9 @@ Every structural or behavioral change must update both this contract and `README
 
 ### Desktop
 
-- Fedora Sway Atomic supplies Sway, SDDM, Waybar, Foot, Rofi, Dunst, Swaylock, Swayidle, Kanshi, Thunar, and `xdg-desktop-portal-wlr`.
-- Sway is the sole graphical session and SDDM is the display manager. GNOME Shell, Mutter, GDM, GNOME sessions, and `xdg-desktop-portal-gnome` must remain absent.
-- Start with Fedora's supported Sway configuration. Add declarative overrides only for demonstrated hardware or workflow needs.
+- Fedora Silverblue supplies GNOME Shell, Mutter, GDM, the GNOME Wayland session, and `xdg-desktop-portal-gnome`; GDM is the display manager.
+- The image adds `yaru-theme`, `gnome-tweaks`, and `gnome-shell-extension-user-theme` for the user's Yaru look. Sway and SDDM must remain absent.
+- Start with Fedora's supported GNOME configuration. Add declarative overrides only for demonstrated hardware or workflow needs.
 
 ## 6. Operational components
 
@@ -123,7 +123,7 @@ After changes to `Containerfile`, `build_files/`, `scripts/build/`, or external 
 - required enabled and masked units;
 - sudoers modes;
 - sysusers/tmpfiles consistency;
-- the Fedora Sway desktop contract and absence of the proprietary NVIDIA/CUDA stack;
+- the Fedora GNOME desktop contract and absence of the proprietary NVIDIA/CUDA stack;
 - absence of retired local-model, VFIO/VM, and build-only paths.
 
 GitHub Actions must run the same image contract after its Buildah build.

@@ -25,8 +25,8 @@ RUN dnf install -y 'dnf-command(builddep)' rpm-build && \
         freerdp-*.src.rpm && \
     echo "AriaOS: FreeRDP RPMs built with FFmpeg/x264 + VAAPI."
 
-# Fedora Sway Atomic provides the complete, distribution-supported desktop.
-FROM quay.io/fedora/fedora-sway-atomic:44
+# Fedora Silverblue provides the complete, distribution-supported GNOME desktop.
+FROM quay.io/fedora/fedora-silverblue:44
 
 # ==========================================
 # 1. COPIA FILE CUSTOM E PERMESSI
@@ -88,7 +88,7 @@ RUN dnf5 install -y --allowerasing --allow-downgrade \
 # 3. BRANDING & IDENTITÀ
 # ==========================================
 
-RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="AriaOS (Sway Atomic)"/' /etc/os-release && \
+RUN sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="AriaOS (Silverblue)"/' /etc/os-release && \
     sed -i 's/^NAME=.*/NAME="AriaOS"/' /etc/os-release && \
     sed -i 's/^ID=fedora/ID=ariaos/' /etc/os-release && \
     sed -i 's/^ID_LIKE=.*/ID_LIKE="fedora"/' /etc/os-release && \
