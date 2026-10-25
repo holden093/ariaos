@@ -48,7 +48,6 @@ readonly packages=(
 
   # Development and Kubernetes
   langpacks-it
-  nodejs-npm
   git
   gh
   ripgrep

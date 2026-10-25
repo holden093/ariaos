@@ -84,6 +84,11 @@ Every structural or behavioral change must update both this contract and `README
 - Generate system-wide Bash completion for kubectl and Minikube.
 - Use rootless Podman for Minikube. Do not add Docker or an always-on Kubernetes service solely for local development.
 
+### Node.js
+
+- Node.js comes from the official nodejs.org Linux x64 tarball, pinned and checksummed in `versions/external-tools.env`, installed to `/usr/lib/nodejs` with `node`, `npm`, `npx`, and `corepack` linked into `/usr/bin`.
+- Fedora's `nodejs*` RPMs must stay absent so they do not conflict with `/usr/bin/node`. Keep the version within the range required by the user's tooling (`^22.23.4 || ^24.22.1 || >=26.12.1`).
+
 ### GPU toolchain
 
 - The host image contains the CMake/Ninja/C++ toolchain and Vulkan headers so users can compile llama.cpp themselves in `/var/home`.
@@ -113,6 +118,7 @@ After changes to `Containerfile`, `build_files/`, `scripts/build/`, or external 
 
 - custom FreeRDP packages;
 - Intel compute and Kubernetes tools;
+- the pinned Node.js version and absence of Fedora Node.js RPMs;
 - completion files;
 - required enabled and masked units;
 - sudoers modes;

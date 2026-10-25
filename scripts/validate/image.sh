@@ -58,6 +58,19 @@ run_image minikube version --short >/dev/null
 run_image kubectx --help >/dev/null
 run_image kubens --help >/dev/null
 
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../versions/external-tools.env"
+node_version=$(run_image node --version)
+if [[ $node_version != "v${NODEJS_VERSION}" ]]; then
+  echo "Unexpected Node.js version: $node_version (expected v${NODEJS_VERSION})" >&2
+  exit 1
+fi
+run_image npm --version >/dev/null
+if run_image rpm -q --whatprovides /usr/bin/node >/dev/null 2>&1; then
+  echo "A Fedora Node.js RPM conflicts with the pinned upstream Node.js." >&2
+  exit 1
+fi
+
 for completion in kubectl minikube; do
   if ! run_image test -s "/etc/bash_completion.d/$completion"; then
     echo "Missing Bash completion: $completion" >&2

@@ -74,6 +74,10 @@ L'immagine include:
 
 Minikube è destinato al driver Podman rootless già presente. Non viene installato Docker e non viene avviato alcun cluster permanente.
 
+### Node.js
+
+Node.js 24 LTS (con `npm`, `npx` e `corepack`) viene installato dal tarball ufficiale di nodejs.org, con versione e SHA-256 fissati in `versions/external-tools.env`. I pacchetti Fedora sono rimasti indietro rispetto ai requisiti minimi dei tool usati; per aggiornare Node cambiare insieme `NODEJS_VERSION` e `NODEJS_SHA256` (da `SHASUMS256.txt` della release).
+
 ## Installazione
 
 Partendo da un sistema Fedora Atomic installato con Btrfs e LUKS2:
