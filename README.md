@@ -30,7 +30,7 @@ AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fe
 
 ### GPU e calcolo
 
-Intel Arc dispone di `intel-compute-runtime`, `intel-level-zero`, OpenCL e strumenti Vulkan per desktop, media e calcolo, senza alcun motore LLM host-side. La sessione usa GNOME Wayland, GDM e `xdg-desktop-portal-gnome` forniti direttamente da Fedora.
+Intel Arc dispone di `intel-compute-runtime`, `intel-level-zero`, del loader `oneapi-level-zero`, OpenCL e strumenti Vulkan per desktop, media e calcolo, senza alcun motore LLM host-side. La sessione usa GNOME Wayland, GDM e `xdg-desktop-portal-gnome` forniti direttamente da Fedora.
 
 ### Toolchain GPU e llama.cpp
 

@@ -30,7 +30,7 @@ Every structural or behavioral change must update both this contract and `README
 ### Intel Arc
 
 - Intel Arc Lunar Lake is the only supported GPU and uses the kernel `xe` driver.
-- Keep `intel-compute-runtime` and `intel-level-zero` in the base image.
+- Keep `intel-compute-runtime`, `intel-level-zero`, and the `oneapi-level-zero` loader in the base image.
 - OpenCL/Level Zero readiness does not authorize adding a model engine, model storage, chatbot, or local-model service.
 - The host image must not add the proprietary NVIDIA driver, CUDA, CDI tooling, or custom eGPU policy. Fedora's generic firmware and default hardware behavior remain unchanged.
 - Do not replace Fedora's kernel with a third-party realtime kernel.

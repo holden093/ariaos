@@ -9,6 +9,7 @@ readonly packages=(
   libva-intel-media-driver
   intel-compute-runtime
   intel-level-zero
+  oneapi-level-zero
 
   # Hardware and Intel GPU diagnostics
   bolt

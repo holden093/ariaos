@@ -25,7 +25,7 @@ if [[ $freerdp_version != *ariaos* ]]; then
   exit 1
 fi
 
-for package in intel-compute-runtime intel-level-zero \
+for package in intel-compute-runtime intel-level-zero oneapi-level-zero \
   gcc-c++ cmake ninja-build vulkan-headers; do
   if ! run_image rpm -q "$package" >/dev/null 2>&1; then
     echo "Required compute/container package is missing: $package" >&2

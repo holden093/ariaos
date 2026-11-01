@@ -12,7 +12,7 @@
 
 ## Intel Arc (Media and Compute)
 - **Media Runtime**: Ensure `libva-intel-media-driver` is correctly configured for hardware acceleration in apps like OBS or FFmpeg.
-- **Compute Runtime**: Keep `intel-compute-runtime` and `intel-level-zero` available as the generic OpenCL/Level Zero foundation; model engines remain separate components.
+- **Compute Runtime**: Keep `intel-compute-runtime`, `intel-level-zero`, and the `oneapi-level-zero` loader available as the generic OpenCL/Level Zero foundation; model engines remain separate components.
 
 ## Build Optimization
 - **Mount Cache**: Use `--mount=type=cache,dst=/var/cache` in `Containerfile` to speed up builds by caching RPM metadata and packages.
