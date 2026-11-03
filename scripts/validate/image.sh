@@ -70,9 +70,9 @@ if run_image rpm -q --whatprovides /usr/bin/node >/dev/null 2>&1; then
   exit 1
 fi
 
-opencode_version=$(run_image rpm -q --queryformat '%{VERSION}' opencode)
-if [[ $opencode_version != "$OPENCODE_VERSION" ]]; then
-  echo "Unexpected OpenCode version: $opencode_version (expected $OPENCODE_VERSION)" >&2
+installed_opencode_version=$(run_image rpm -q --queryformat '%{VERSION}' opencode)
+if [[ $installed_opencode_version != "$OPENCODE_VERSION" ]]; then
+  echo "Unexpected OpenCode version: $installed_opencode_version (expected $OPENCODE_VERSION)" >&2
   exit 1
 fi
 if ! run_image test -x /usr/bin/ai.opencode; then
