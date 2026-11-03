@@ -70,6 +70,17 @@ if run_image rpm -q --whatprovides /usr/bin/node >/dev/null 2>&1; then
   exit 1
 fi
 
+opencode_version=$(run_image rpm -q --queryformat '%{VERSION}' opencode)
+if [[ $opencode_version != "$OPENCODE_VERSION" ]]; then
+  echo "Unexpected OpenCode version: $opencode_version (expected $OPENCODE_VERSION)" >&2
+  exit 1
+fi
+if ! run_image test -x /usr/bin/ai.opencode; then
+  echo "OpenCode Desktop launcher is missing or not executable." >&2
+  exit 1
+fi
+run_image test -s /usr/share/applications/opencode-desktop.desktop
+
 for completion in kubectl minikube; do
   if ! run_image test -s "/etc/bash_completion.d/$completion"; then
     echo "Missing Bash completion: $completion" >&2
