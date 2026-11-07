@@ -93,6 +93,7 @@ Every structural or behavioral change must update both this contract and `README
 
 - The base image contains OpenCode Desktop from the official versioned Linux x86-64 RPM.
 - Pin `OPENCODE_VERSION` and `OPENCODE_SHA256` together in `versions/external-tools.env`; do not use the moving `latest` download endpoint during image builds.
+- bootc unpacks `/var` only from the initial image and `/opt` links to `/var/opt`, so the application must ship in `/usr/lib/opencode`, never in `/var`. `ariaos-opencode.conf` recreates `/opt/OpenCode` as a tmpfiles symlink at boot.
 
 ### GPU toolchain
 

@@ -25,5 +25,10 @@ echo "${OPENCODE_SHA256}  ${archive}" | sha256sum -c -
 mkdir -p /var/opt
 dnf5 install -y "$archive"
 
+# bootc unpacks /var only from the initial image, so upgrades would never deliver
+# the application there. Ship it in /usr; tmpfiles restores the /opt/OpenCode path.
+mv /var/opt/OpenCode /usr/lib/opencode
+rmdir /var/opt
+
 rm -f "$archive"
 dnf5 clean all

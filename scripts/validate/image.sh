@@ -75,11 +75,20 @@ if [[ $installed_opencode_version != "$OPENCODE_VERSION" ]]; then
   echo "Unexpected OpenCode version: $installed_opencode_version (expected $OPENCODE_VERSION)" >&2
   exit 1
 fi
-if ! run_image test -x /usr/bin/ai.opencode; then
-  echo "OpenCode Desktop launcher is missing or not executable." >&2
+# bootc unpacks /var only from the initial image, so upgraded systems would miss
+# the application if it stayed there. Only the boot-time tmpfiles link may exist.
+if run_image test -e /var/opt/OpenCode; then
+  echo "OpenCode Desktop must not ship in /var: bootc upgrades would not deliver it." >&2
   exit 1
 fi
-run_image test -s /usr/share/applications/opencode-desktop.desktop
+if ! run_image sh -c 'systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-opencode.conf &&
+  test -x /usr/lib/opencode/ai.opencode &&
+  test -x /opt/OpenCode/ai.opencode &&
+  test -x /usr/bin/ai.opencode'; then
+  echo "OpenCode Desktop launcher does not resolve after tmpfiles setup." >&2
+  exit 1
+fi
+run_image test -s /usr/share/applications/ai.opencode.desktop.desktop
 
 for completion in kubectl minikube; do
   if ! run_image test -s "/etc/bash_completion.d/$completion"; then

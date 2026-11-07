@@ -80,7 +80,7 @@ Node.js 24 LTS (con `npm`, `npx` e `corepack`) viene installato dal tarball uffi
 
 ### OpenCode
 
-OpenCode Desktop viene installato dall'RPM ufficiale Linux x86-64. La build usa un artefatto versionato con SHA-256 verificato; per aggiornarlo cambiare insieme `OPENCODE_VERSION` e `OPENCODE_SHA256` in `versions/external-tools.env`.
+OpenCode Desktop viene installato dall'RPM ufficiale Linux x86-64. La build usa un artefatto versionato con SHA-256 verificato; per aggiornarlo cambiare insieme `OPENCODE_VERSION` e `OPENCODE_SHA256` in `versions/external-tools.env`. L'applicazione risiede in `/usr/lib/opencode`, perché `bootc upgrade` non aggiorna `/var` (e `/opt` punta a `/var/opt`); `systemd-tmpfiles` ricrea all'avvio il percorso `/opt/OpenCode` usato dall'RPM.
 
 ## Installazione
 
