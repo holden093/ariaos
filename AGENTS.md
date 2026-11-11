@@ -95,6 +95,13 @@ Every structural or behavioral change must update both this contract and `README
 - Pin `OPENCODE_VERSION` and `OPENCODE_SHA256` together in `versions/external-tools.env`; do not use the moving `latest` download endpoint during image builds.
 - bootc unpacks `/var` only from the initial image and `/opt` links to `/var/opt`, so the application must ship in `/usr/lib/opencode`, never in `/var`. `ariaos-opencode.conf` recreates `/opt/OpenCode` as a tmpfiles symlink at boot.
 
+### Intel oneAPI runtimes
+
+- The base image contains the oneAPI compiler shared runtime, OpenMP, UMF, TBB, TCM, and `intel-oneapi-common-*` RPMs from Intel's GPG-signed repository, installed by `scripts/build/install-oneapi.sh`.
+- Pin every package's VERSION-RELEASE through the `ONEAPI_*_VERSION` variables in `versions/external-tools.env`. `oneAPI.repo` ships with `enabled=0`; only the build enables it.
+- The RPMs target `/opt/intel`, so the build moves them to `/usr/lib/intel`, `ariaos-oneapi.conf` recreates `/opt/intel` as a tmpfiles symlink, the CPU OpenCL ICD points into `/usr`, and nothing may remain in `/var/opt/intel` or `/var/usrlocal`.
+- These runtimes do not authorize adding model engines or llama.cpp binaries.
+
 ### GPU toolchain
 
 - The host image contains the CMake/Ninja/C++ toolchain and Vulkan headers so users can compile llama.cpp themselves in `/var/home`.

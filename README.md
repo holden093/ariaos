@@ -32,6 +32,10 @@ AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fe
 
 Intel Arc dispone di `intel-compute-runtime`, `intel-level-zero`, del loader `oneapi-level-zero`, OpenCL e strumenti Vulkan per desktop, media e calcolo, senza alcun motore LLM host-side. La sessione usa GNOME Wayland, GDM e `xdg-desktop-portal-gnome` forniti direttamente da Fedora.
 
+### Runtime Intel oneAPI
+
+L'immagine include i runtime oneAPI (compiler shared runtime e OpenMP 2025.3, UMF 1.0, TBB 2022.3, TCM 1.4 e i pacchetti `intel-oneapi-common-*`) dal repository ufficiale Intel, firmato GPG. Il repository `oneAPI` resta disabilitato nell'immagine e le versioni sono bloccate in `versions/external-tools.env` (`ONEAPI_*_VERSION`). I file risiedono in `/usr/lib/intel`, perché `bootc upgrade` non aggiorna `/var`; `systemd-tmpfiles` ricrea `/opt/intel`. Per caricare l'ambiente: `source /opt/intel/oneapi/setvars.sh`.
+
 ### Toolchain GPU e llama.cpp
 
 L'immagine contiene gli strumenti per compilare manualmente `llama.cpp`, ma non

@@ -72,6 +72,10 @@ RUN --mount=type=bind,from=build-tools,source=/,target=/ariaos-build \
     bash /ariaos-build/scripts/build/install-opencode.sh \
         /ariaos-build/versions/external-tools.env
 
+RUN --mount=type=bind,from=build-tools,source=/,target=/ariaos-build \
+    bash /ariaos-build/scripts/build/install-oneapi.sh \
+        /ariaos-build/versions/external-tools.env
+
 # ==========================================
 # 2b. OVERRIDE FREERDP WITH FFMPEG/x264 + VAAPI BUILD
 # ==========================================

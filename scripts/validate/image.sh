@@ -90,6 +90,36 @@ if ! run_image sh -c 'systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-openc
 fi
 run_image test -s /usr/share/applications/ai.opencode.desktop.desktop
 
+for package in \
+  "intel-oneapi-common-licensing-${ONEAPI_COMMON_VERSION}" \
+  "intel-oneapi-common-oneapi-vars-${ONEAPI_COMMON_VERSION}" \
+  "intel-oneapi-common-vars-${ONEAPI_COMMON_VERSION}" \
+  "intel-oneapi-compiler-shared-runtime-2025.3-${ONEAPI_COMPILER_VERSION}" \
+  "intel-oneapi-openmp-2025.3-${ONEAPI_COMPILER_VERSION}" \
+  "intel-oneapi-openmp-common-2025.3-${ONEAPI_COMPILER_VERSION}" \
+  "intel-oneapi-umf-1.0-${ONEAPI_UMF_VERSION}" \
+  "intel-oneapi-tbb-2022.3-${ONEAPI_TBB_VERSION}" \
+  "intel-oneapi-tcm-1.4-${ONEAPI_TCM_VERSION}"; do
+  if ! run_image rpm -q "$package" >/dev/null 2>&1; then
+    echo "Required oneAPI runtime package is missing: $package" >&2
+    exit 1
+  fi
+done
+if run_image test -e /var/opt/intel || run_image test -e /var/usrlocal/share/pkgconfig/openmp.pc; then
+  echo "oneAPI runtimes must not ship in /var: bootc upgrades would not deliver them." >&2
+  exit 1
+fi
+run_image grep -Fqx 'enabled=0' /etc/yum.repos.d/oneAPI.repo
+if ! run_image sh -c 'test -e "$(cat /etc/OpenCL/vendors/intel64.icd)" &&
+  systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-opencode.conf \
+    /usr/lib/tmpfiles.d/ariaos-oneapi.conf &&
+  test -e /opt/intel/oneapi/tbb/latest/lib/libtbb.so.12 &&
+  test -e /opt/intel/oneapi/compiler/latest/lib/libiomp5.so &&
+  test -s /opt/intel/oneapi/setvars.sh'; then
+  echo "oneAPI runtimes do not resolve after tmpfiles setup." >&2
+  exit 1
+fi
+
 for completion in kubectl minikube; do
   if ! run_image test -s "/etc/bash_completion.d/$completion"; then
     echo "Missing Bash completion: $completion" >&2
