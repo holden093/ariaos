@@ -97,7 +97,7 @@ Every structural or behavioral change must update both this contract and `README
 
 ### Intel oneAPI runtimes
 
-- The base image contains the oneAPI compiler shared runtime, OpenMP, UMF, TBB, TCM, and `intel-oneapi-common-*` RPMs from Intel's GPG-signed repository, installed by `scripts/build/install-oneapi.sh`.
+- The base image contains the oneAPI compiler shared runtime, the DPC++/SYCL runtime (`libsycl`, Unified Runtime loader, and Level Zero adapters), OpenMP, UMF, TBB, TCM, and `intel-oneapi-common-*` RPMs from Intel's GPG-signed repository, installed by `scripts/build/install-oneapi.sh`.
 - Pin every package's VERSION-RELEASE through the `ONEAPI_*_VERSION` variables in `versions/external-tools.env`. `oneAPI.repo` ships with `enabled=0`; only the build enables it.
 - The RPMs target `/opt/intel`, so the build moves them to `/usr/lib/intel`, `ariaos-oneapi.conf` recreates `/opt/intel` as a tmpfiles symlink, the CPU OpenCL ICD points into `/usr`, and nothing may remain in `/var/opt/intel` or `/var/usrlocal`.
 - These runtimes do not authorize adding model engines or llama.cpp binaries.

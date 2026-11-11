@@ -95,6 +95,7 @@ for package in \
   "intel-oneapi-common-oneapi-vars-${ONEAPI_COMMON_VERSION}" \
   "intel-oneapi-common-vars-${ONEAPI_COMMON_VERSION}" \
   "intel-oneapi-compiler-shared-runtime-2025.3-${ONEAPI_COMPILER_VERSION}" \
+  "intel-oneapi-compiler-dpcpp-cpp-runtime-2025.3-${ONEAPI_COMPILER_VERSION}" \
   "intel-oneapi-openmp-2025.3-${ONEAPI_COMPILER_VERSION}" \
   "intel-oneapi-openmp-common-2025.3-${ONEAPI_COMPILER_VERSION}" \
   "intel-oneapi-umf-1.0-${ONEAPI_UMF_VERSION}" \
@@ -119,6 +120,10 @@ if ! run_image sh -c 'systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-openc
     /usr/lib/tmpfiles.d/ariaos-oneapi.conf &&
   test -e /opt/intel/oneapi/tbb/latest/lib/libtbb.so.12 &&
   test -e /opt/intel/oneapi/compiler/latest/lib/libiomp5.so &&
+  test -e /opt/intel/oneapi/compiler/2025.3/lib/libsycl.so.8 &&
+  test -e /opt/intel/oneapi/compiler/2025.3/lib/libur_loader.so.0 &&
+  test -e /opt/intel/oneapi/compiler/2025.3/lib/libur_adapter_level_zero.so.0 &&
+  test -e /opt/intel/oneapi/compiler/2025.3/lib/libur_adapter_level_zero_v2.so.0 &&
   test -s /opt/intel/oneapi/setvars.sh'; then
   echo "oneAPI runtimes do not resolve after tmpfiles setup." >&2
   exit 1

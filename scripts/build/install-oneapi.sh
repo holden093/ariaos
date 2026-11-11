@@ -24,6 +24,7 @@ readonly packages=(
   "intel-oneapi-common-oneapi-vars-${ONEAPI_COMMON_VERSION}"
   "intel-oneapi-common-vars-${ONEAPI_COMMON_VERSION}"
   "intel-oneapi-compiler-shared-runtime-2025.3-${ONEAPI_COMPILER_VERSION}"
+  "intel-oneapi-compiler-dpcpp-cpp-runtime-2025.3-${ONEAPI_COMPILER_VERSION}"
   "intel-oneapi-openmp-2025.3-${ONEAPI_COMPILER_VERSION}"
   "intel-oneapi-openmp-common-2025.3-${ONEAPI_COMPILER_VERSION}"
   "intel-oneapi-umf-1.0-${ONEAPI_UMF_VERSION}"
