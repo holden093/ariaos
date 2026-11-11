@@ -110,8 +110,12 @@ if run_image test -e /var/opt/intel || run_image test -e /var/usrlocal/share/pkg
   exit 1
 fi
 run_image grep -Fqx 'enabled=0' /etc/yum.repos.d/oneAPI.repo
-if ! run_image sh -c 'test -e "$(cat /etc/OpenCL/vendors/intel64.icd)" &&
-  systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-opencode.conf \
+oneapi_cpu_icd=$(run_image cat /etc/OpenCL/vendors/intel64.icd)
+if [[ $oneapi_cpu_icd != /usr/lib/intel/* ]] || ! run_image test -e "$oneapi_cpu_icd"; then
+  echo "oneAPI CPU OpenCL ICD must point to an existing library in /usr/lib/intel." >&2
+  exit 1
+fi
+if ! run_image sh -c 'systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-opencode.conf \
     /usr/lib/tmpfiles.d/ariaos-oneapi.conf &&
   test -e /opt/intel/oneapi/tbb/latest/lib/libtbb.so.12 &&
   test -e /opt/intel/oneapi/compiler/latest/lib/libiomp5.so &&
