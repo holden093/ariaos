@@ -25,7 +25,7 @@ if [[ $freerdp_version != *ariaos* ]]; then
   exit 1
 fi
 
-for package in intel-compute-runtime intel-level-zero oneapi-level-zero \
+for package in intel-compute-runtime intel-level-zero oneapi-level-zero oneapi-level-zero-devel \
   gcc-c++ cmake ninja-build vulkan-headers; do
   if ! run_image rpm -q "$package" >/dev/null 2>&1; then
     echo "Required compute/container package is missing: $package" >&2
@@ -100,13 +100,19 @@ for package in \
   "intel-oneapi-openmp-common-2025.3-${ONEAPI_COMPILER_VERSION}" \
   "intel-oneapi-umf-1.0-${ONEAPI_UMF_VERSION}" \
   "intel-oneapi-tbb-2022.3-${ONEAPI_TBB_VERSION}" \
-  "intel-oneapi-tcm-1.4-${ONEAPI_TCM_VERSION}"; do
+  "intel-oneapi-tcm-1.4-${ONEAPI_TCM_VERSION}" \
+  "intel-oneapi-compiler-dpcpp-cpp-2025.3-${ONEAPI_COMPILER_VERSION}" \
+  "intel-oneapi-dpcpp-cpp-2025.3-${ONEAPI_COMPILER_VERSION}" \
+  "intel-oneapi-dpcpp-debugger-2025.3-${ONEAPI_DEBUGGER_VERSION}" \
+  "intel-oneapi-dev-utilities-2025.3-${ONEAPI_DEV_UTILITIES_VERSION}" \
+  "intel-oneapi-tbb-devel-2022.3-${ONEAPI_TBB_VERSION}" \
+  "intel-oneapi-libdpstd-devel-2022.10-${ONEAPI_DPL_VERSION}"; do
   if ! run_image rpm -q "$package" >/dev/null 2>&1; then
     echo "Required oneAPI runtime package is missing: $package" >&2
     exit 1
   fi
 done
-if run_image test -e /var/opt/intel || run_image test -e /var/usrlocal/share/pkgconfig/openmp.pc; then
+if run_image test -e /var/opt/intel || run_image test -e /var/usrlocal/share/pkgconfig; then
   echo "oneAPI runtimes must not ship in /var: bootc upgrades would not deliver them." >&2
   exit 1
 fi
@@ -124,8 +130,20 @@ if ! run_image sh -c 'systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-openc
   test -e /opt/intel/oneapi/compiler/2025.3/lib/libur_loader.so.0 &&
   test -e /opt/intel/oneapi/compiler/2025.3/lib/libur_adapter_level_zero.so.0 &&
   test -e /opt/intel/oneapi/compiler/2025.3/lib/libur_adapter_level_zero_v2.so.0 &&
-  test -s /opt/intel/oneapi/setvars.sh'; then
+  test -s /opt/intel/oneapi/setvars.sh &&
+  test -x /opt/intel/oneapi/compiler/2025.3/bin/sycl-ls'; then
   echo "oneAPI runtimes do not resolve after tmpfiles setup." >&2
+  exit 1
+fi
+# The DPC++ compiler must build SYCL code against the Fedora Level Zero headers.
+if ! run_image bash -c 'systemd-tmpfiles --create /usr/lib/tmpfiles.d/ariaos-opencode.conf \
+    /usr/lib/tmpfiles.d/ariaos-oneapi.conf &&
+  source /opt/intel/oneapi/setvars.sh >/dev/null &&
+  printf "%s\n" "#include <sycl/sycl.hpp>" "#include <level_zero/ze_api.h>" \
+    "int main() { sycl::queue q{sycl::default_selector_v}; (void)q; return ZE_RESULT_SUCCESS; }" \
+    >/tmp/ariaos-sycl-check.cpp &&
+  icpx -fsycl /tmp/ariaos-sycl-check.cpp -o /tmp/ariaos-sycl-check'; then
+  echo "The oneAPI DPC++ compiler cannot build a SYCL program." >&2
   exit 1
 fi
 

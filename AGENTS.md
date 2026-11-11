@@ -30,7 +30,7 @@ Every structural or behavioral change must update both this contract and `README
 ### Intel Arc
 
 - Intel Arc Lunar Lake is the only supported GPU and uses the kernel `xe` driver.
-- Keep `intel-compute-runtime`, `intel-level-zero`, and the `oneapi-level-zero` loader in the base image.
+- Keep `intel-compute-runtime`, `intel-level-zero`, the `oneapi-level-zero` loader, and `oneapi-level-zero-devel` headers in the base image.
 - OpenCL/Level Zero readiness does not authorize adding a model engine, model storage, chatbot, or local-model service.
 - The host image must not add the proprietary NVIDIA driver, CUDA, CDI tooling, or custom eGPU policy. Fedora's generic firmware and default hardware behavior remain unchanged.
 - Do not replace Fedora's kernel with a third-party realtime kernel.
@@ -95,16 +95,16 @@ Every structural or behavioral change must update both this contract and `README
 - Pin `OPENCODE_VERSION` and `OPENCODE_SHA256` together in `versions/external-tools.env`; do not use the moving `latest` download endpoint during image builds.
 - bootc unpacks `/var` only from the initial image and `/opt` links to `/var/opt`, so the application must ship in `/usr/lib/opencode`, never in `/var`. `ariaos-opencode.conf` recreates `/opt/OpenCode` as a tmpfiles symlink at boot.
 
-### Intel oneAPI runtimes
+### Intel oneAPI runtimes and DPC++ compiler
 
-- The base image contains the oneAPI compiler shared runtime, the DPC++/SYCL runtime (`libsycl`, Unified Runtime loader, and Level Zero adapters), OpenMP, UMF, TBB, TCM, and `intel-oneapi-common-*` RPMs from Intel's GPG-signed repository, installed by `scripts/build/install-oneapi.sh`.
-- Pin every package's VERSION-RELEASE through the `ONEAPI_*_VERSION` variables in `versions/external-tools.env`. `oneAPI.repo` ships with `enabled=0`; only the build enables it.
+- The base image contains the oneAPI compiler shared runtime, the DPC++/SYCL runtime (`libsycl`, Unified Runtime loader, and Level Zero adapters), OpenMP, UMF, TBB, TCM, `intel-oneapi-common-*`, and the DPC++/C++ compiler (`intel-oneapi-compiler-dpcpp-cpp-2025.3`) with its debugger, dev utilities, oneDPL, and TBB headers, all RPMs from Intel's GPG-signed repository, installed by `scripts/build/install-oneapi.sh`.
+- List and pin every oneAPI package, including the compiler's dependency closure, by VERSION-RELEASE through the `ONEAPI_*_VERSION` variables in `versions/external-tools.env`. `oneAPI.repo` ships with `enabled=0`; only the build enables it.
 - The RPMs target `/opt/intel`, so the build moves them to `/usr/lib/intel`, `ariaos-oneapi.conf` recreates `/opt/intel` as a tmpfiles symlink, the CPU OpenCL ICD points into `/usr`, and nothing may remain in `/var/opt/intel` or `/var/usrlocal`.
-- These runtimes do not authorize adding model engines or llama.cpp binaries.
+- The compiler is part of the user build toolchain; it does not authorize adding model engines or llama.cpp binaries.
 
 ### GPU toolchain
 
-- The host image contains the CMake/Ninja/C++ toolchain and Vulkan headers so users can compile llama.cpp themselves in `/var/home`.
+- The host image contains the CMake/Ninja/C++ toolchain, Vulkan headers, and the oneAPI DPC++ compiler with Level Zero headers so users can compile llama.cpp themselves in `/var/home`.
 - The host image must not contain llama.cpp binaries, model engines, model storage, launchers, or toolbox-specific configuration.
 
 ## 7. Empirical workflow

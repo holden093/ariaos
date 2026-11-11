@@ -32,9 +32,9 @@ AriaOS è un sistema operativo personale, immutabile e dichiarativo basato su Fe
 
 Intel Arc dispone di `intel-compute-runtime`, `intel-level-zero`, del loader `oneapi-level-zero`, OpenCL e strumenti Vulkan per desktop, media e calcolo, senza alcun motore LLM host-side. La sessione usa GNOME Wayland, GDM e `xdg-desktop-portal-gnome` forniti direttamente da Fedora.
 
-### Runtime Intel oneAPI
+### Intel oneAPI (runtime e compilatore DPC++)
 
-L'immagine include i runtime oneAPI (compiler shared runtime, runtime DPC++/SYCL con gli adapter Level Zero e OpenMP 2025.3, UMF 1.0, TBB 2022.3, TCM 1.4 e i pacchetti `intel-oneapi-common-*`) dal repository ufficiale Intel, firmato GPG. Il repository `oneAPI` resta disabilitato nell'immagine e le versioni sono bloccate in `versions/external-tools.env` (`ONEAPI_*_VERSION`). I file risiedono in `/usr/lib/intel`, perché `bootc upgrade` non aggiorna `/var`; `systemd-tmpfiles` ricrea `/opt/intel`. Per caricare l'ambiente: `source /opt/intel/oneapi/setvars.sh`.
+L'immagine include i runtime oneAPI (compiler shared runtime, runtime DPC++/SYCL con gli adapter Level Zero e OpenMP 2025.3, UMF 1.0, TBB 2022.3, TCM 1.4 e i pacchetti `intel-oneapi-common-*`) e il compilatore DPC++/C++ 2025.3 (`icpx`, `sycl-ls`, debugger, oneDPL e header TBB) dal repository ufficiale Intel, firmato GPG. Gli header Level Zero arrivano da Fedora (`oneapi-level-zero-devel`), così `llama.cpp` può essere compilato anche con il backend SYCL (`-DGGML_SYCL=ON`). Ogni pacchetto oneAPI, dipendenze comprese, ha la versione bloccata. Il repository `oneAPI` resta disabilitato nell'immagine e le versioni sono bloccate in `versions/external-tools.env` (`ONEAPI_*_VERSION`). I file risiedono in `/usr/lib/intel`, perché `bootc upgrade` non aggiorna `/var`; `systemd-tmpfiles` ricrea `/opt/intel`. Per caricare l'ambiente: `source /opt/intel/oneapi/setvars.sh`.
 
 ### Toolchain GPU e llama.cpp
 

@@ -10,6 +10,7 @@ readonly packages=(
   intel-compute-runtime
   intel-level-zero
   oneapi-level-zero
+  oneapi-level-zero-devel
 
   # Hardware and Intel GPU diagnostics
   bolt
